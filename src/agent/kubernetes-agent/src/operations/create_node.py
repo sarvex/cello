@@ -31,8 +31,7 @@ def _upload_ca_crypto(pod):
     copy_cmd = [
         "kubectl",
         "cp",
-        "%s/%s:/etc/hyperledger/fabric-ca-server/crypto"
-        % (AGENT_ID, pod.metadata.name),
+        f"{AGENT_ID}/{pod.metadata.name}:/etc/hyperledger/fabric-ca-server/crypto",
         "crypto",
     ]
     subprocess.call(copy_cmd)
@@ -58,22 +57,22 @@ def _generate_peer_env_from_ports(ports=None):
             environments += [
                 {
                     "name": "CORE_PEER_ADDRESS",
-                    "value": "%s:%s" % (AGENT_IP, external_port),
+                    "value": f"{AGENT_IP}:{external_port}",
                 },
                 {
                     "name": "CORE_PEER_GOSSIP_EXTERNALENDPOINT",
-                    "value": "%s:%s" % (AGENT_IP, external_port),
+                    "value": f"{AGENT_IP}:{external_port}",
                 },
             ]
         elif internal_port == 7052:
             environments += [
                 {
                     "name": "CORE_PEER_CHAINCODEADDRESS",
-                    "value": "%s:%s" % (AGENT_IP, external_port),
+                    "value": f"{AGENT_IP}:{external_port}",
                 },
                 {
                     "name": "CORE_PEER_CHAINCODELISTENADDRESS",
-                    "value": "0.0.0.0:%s" % external_port,
+                    "value": f"0.0.0.0:{external_port}",
                 },
             ]
 
@@ -135,7 +134,7 @@ def _create_fabric_node():
     pod = None
     # Query pod status if is Running
     node_status = NodeStatus.Error.value
-    for i in range(1, MAX_QUERY_RETRY):
+    for _ in range(1, MAX_QUERY_RETRY):
         pod = k8s_client.get_pod(AGENT_ID, deploy_name)
         if pod and pod.status.phase == "Running":
             node_status = NodeStatus.Running.value
@@ -149,11 +148,8 @@ def _create_fabric_node():
         data=json.dumps({"status": node_status, "ports": ports}),
     )
 
-    if node_status == NodeStatus.Running.value:
-        # if deploy success and node type is ca,
-        # will upload the crypto files to api engine
-        if NODE_TYPE == "ca":
-            _upload_ca_crypto(pod)
+    if node_status == NodeStatus.Running.value and NODE_TYPE == "ca":
+        _upload_ca_crypto(pod)
 
 
 def create_node():

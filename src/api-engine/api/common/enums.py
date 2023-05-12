@@ -6,14 +6,12 @@ import inspect
 
 
 def separate_upper_class(class_name):
-    x = ""
-    i = 0
-    for c in class_name:
-        if c.isupper() and not class_name[i - 1].isupper():
-            x += " %s" % c.lower()
-        else:
-            x += c
-        i += 1
+    x = "".join(
+        f" {c.lower()}"
+        if c.isupper() and not class_name[i - 1].isupper()
+        else c
+        for i, c in enumerate(class_name)
+    )
     return "_".join(x.strip().split(" "))
 
 
@@ -43,22 +41,19 @@ class ExtraEnum(Enum):
     @classmethod
     def to_choices(cls, string_as_value=False, separate_class_name=False):
         if string_as_value:
-            choices = [
+            return [
                 (name.lower().replace("_", "."), name)
                 for name, member in cls.__members__.items()
             ]
         elif separate_class_name:
-            choices = [
+            return [
                 (separate_upper_class(name), name)
                 for name, member in cls.__members__.items()
             ]
         else:
-            choices = [
-                (member.value, name)
-                for name, member in cls.__members__.items()
+            return [
+                (member.value, name) for name, member in cls.__members__.items()
             ]
-
-        return choices
 
     @classmethod
     def values(cls):
@@ -210,7 +205,7 @@ class AgentOperation(ExtraEnum):
 
 
 class EnumWithDisplayMeta(EnumMeta):
-    def __new__(mcs, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):
         display_strings = attrs.get("DisplayStrings")
 
         if display_strings is not None and inspect.isclass(display_strings):
@@ -218,7 +213,7 @@ class EnumWithDisplayMeta(EnumMeta):
             if hasattr(attrs, "_member_names"):
                 attrs._member_names.remove("DisplayStrings")
 
-        obj = super().__new__(mcs, name, bases, attrs)
+        obj = super().__new__(cls, name, bases, attrs)
         for m in obj:
             m.display_string = getattr(display_strings, m.name, None)
 

@@ -48,7 +48,7 @@ class UserViewSet(viewsets.ViewSet):
             per_page = serializer.validated_data.get("per_page")
             query_params = {}
             if username:
-                query_params.update({"username__icontains": username})
+                query_params["username__icontains"] = username
 
             users = UserProfile.objects.filter(**query_params).exclude(
                 username=ADMIN_USERNAME

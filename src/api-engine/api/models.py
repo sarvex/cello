@@ -143,17 +143,15 @@ class UserProfile(AbstractUser):
 
 def get_agent_config_file_path(instance, file):
     file_ext = file.split(".")[-1]
-    filename = "%s.%s" % (hash_file(instance.config_file), file_ext)
+    filename = f"{hash_file(instance.config_file)}.{file_ext}"
 
-    return os.path.join("config_files/%s" % str(instance.id), filename)
+    return os.path.join(f"config_files/{str(instance.id)}", filename)
 
 
 def validate_agent_config_file(file):
     file_size = file.size
     if file_size > LIMIT_K8S_CONFIG_FILE_MB * 1024 * 1024:
-        raise ValidationError(
-            "Max file size is %s MB" % LIMIT_K8S_CONFIG_FILE_MB
-        )
+        raise ValidationError(f"Max file size is {LIMIT_K8S_CONFIG_FILE_MB} MB")
 
 
 class Agent(models.Model):
@@ -213,12 +211,11 @@ class Agent(models.Model):
     )
 
     def delete(self, using=None, keep_parents=False):
-        if self.config_file:
-            if os.path.isfile(self.config_file.path):
-                os.remove(self.config_file.path)
-                shutil.rmtree(
-                    os.path.dirname(self.config_file.path), ignore_errors=True
-                )
+        if self.config_file and os.path.isfile(self.config_file.path):
+            os.remove(self.config_file.path)
+            shutil.rmtree(
+                os.path.dirname(self.config_file.path), ignore_errors=True
+            )
 
         super(Agent, self).delete(using, keep_parents)
 
@@ -228,17 +225,16 @@ class Agent(models.Model):
 
 @receiver(post_save, sender=Agent)
 def extract_file(sender, instance, created, *args, **kwargs):
-    if created:
-        if instance.config_file:
-            file_format = instance.config_file.name.split(".")[-1]
-            if file_format in ["tgz", "gz"]:
-                tar = tarfile.open(instance.config_file.path)
-                tar.extractall(path=os.path.dirname(instance.config_file.path))
-            elif file_format == "zip":
-                with ZipFile(instance.config_file.path, "r") as zip_file:
-                    zip_file.extractall(
-                        path=os.path.dirname(instance.config_file.path)
-                    )
+    if created and instance.config_file:
+        file_format = instance.config_file.name.split(".")[-1]
+        if file_format in ["tgz", "gz"]:
+            tar = tarfile.open(instance.config_file.path)
+            tar.extractall(path=os.path.dirname(instance.config_file.path))
+        elif file_format == "zip":
+            with ZipFile(instance.config_file.path, "r") as zip_file:
+                zip_file.extractall(
+                    path=os.path.dirname(instance.config_file.path)
+                )
 
 
 class KubernetesConfig(models.Model):
@@ -292,6 +288,8 @@ class KubernetesConfig(models.Model):
     )
 
 
+
+
 class Network(models.Model):
     id = models.UUIDField(
         primary_key=True,
@@ -305,7 +303,7 @@ class Network(models.Model):
         default=random_name("netowrk"),
     )
     type = models.CharField(
-        help_text="Type of network, %s" % NetworkType.values(),
+        help_text=f"Type of network, {NetworkType.values()}",
         max_length=64,
         default=NetworkType.Fabric.value,
     )
@@ -338,16 +336,13 @@ class Network(models.Model):
 
 def get_compose_file_path(instance, file):
     return os.path.join(
-        "org/%s/agent/docker/compose_files/%s"
-        % (str(instance.organization.id), str(instance.id)),
+        f"org/{str(instance.organization.id)}/agent/docker/compose_files/{str(instance.id)}",
         "docker-compose.yml",
     )
 
 
 def get_ca_certificate_path(instance, file):
-    return os.path.join(
-        "fabric/ca/certificates/%s" % str(instance.id), file.name
-    )
+    return os.path.join(f"fabric/ca/certificates/{str(instance.id)}", file.name)
 
 
 def get_node_file_path(instance, file):
@@ -358,10 +353,10 @@ def get_node_file_path(instance, file):
     :return: path of file system which will store the file.
     """
     file_ext = file.split(".")[-1]
-    filename = "%s.%s" % (hash_file(instance.file), file_ext)
+    filename = f"{hash_file(instance.file)}.{file_ext}"
 
     return os.path.join(
-        "files/%s/node/%s" % (str(instance.organization.id), str(instance.id)),
+        f"files/{str(instance.organization.id)}/node/{str(instance.id)}",
         filename,
     )
 
@@ -547,11 +542,7 @@ class Node(models.Model):
         ordering = ("-created_at",)
 
     def get_compose_file_path(self):
-        return "%s/org/%s/agent/docker/compose_files/%s/docker-compose.yml" % (
-            MEDIA_ROOT,
-            str(self.organization.id),
-            str(self.id),
-        )
+        return f"{MEDIA_ROOT}/org/{str(self.organization.id)}/agent/docker/compose_files/{str(self.id)}/docker-compose.yml"
 
     def save(
         self,
@@ -641,11 +632,10 @@ def get_file_path(instance, file):
     :return: path of file system which will store the file.
     """
     file_ext = file.split(".")[-1]
-    filename = "%s.%s" % (hash_file(instance.file), file_ext)
+    filename = f"{hash_file(instance.file)}.{file_ext}"
 
     return os.path.join(
-        "files/%s/%s" % (str(instance.organization.id), str(instance.id)),
-        filename,
+        f"files/{str(instance.organization.id)}/{str(instance.id)}", filename
     )
 
 
@@ -657,7 +647,7 @@ def validate_file(file):
     """
     file_size = file.size
     if file_size > LIMIT_FILE_MB * 1024 * 1024:
-        raise ValidationError("Max file size is %s MB" % LIMIT_FILE_MB)
+        raise ValidationError(f"Max file size is {LIMIT_FILE_MB} MB")
 
 
 class File(models.Model):
@@ -758,10 +748,10 @@ class Channel(models.Model):
     )
 
     def get_channel_config_path(self):
-        return "/var/www/server/" + self.name + "_config.block"
+        return f"/var/www/server/{self.name}_config.block"
 
     def get_channel_artifacts_path(self, artifact):
-        return CELLO_HOME + "/" + self.network.name + "/" + artifact
+        return f"{CELLO_HOME}/{self.network.name}/{artifact}"
 
     # class ChainCode(models.Model):
     #     id = models.UUIDField(

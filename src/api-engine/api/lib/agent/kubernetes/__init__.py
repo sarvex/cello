@@ -64,9 +64,7 @@ class KubernetesAgent(AgentBase):
     def delete(self, *args, **kwargs):
         deployment = self._config.get("deployment")
         service = self._config.get("service")
-        ingress = self._config.get("ingress")
-
-        if ingress:
+        if ingress := self._config.get("ingress"):
             self._client.delete_ingress(
                 namespace=self._agent_id, name=ingress.get("name")
             )

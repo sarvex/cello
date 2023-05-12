@@ -11,7 +11,7 @@ class ConfigTxLator:
     """
 
     def __init__(self, configtxlator=FABRIC_TOOL, version="2.2.0"):
-        self.configtxlator = configtxlator + "/configtxlator"
+        self.configtxlator = f"{configtxlator}/configtxlator"
         self.version = version
 
     def proto_encode(self, input, type, output):
@@ -24,12 +24,15 @@ class ConfigTxLator:
             output: A file to write the output to.
         """
         try:
-            call([self.configtxlator,
-                  "proto_encode",
-                  "--input={}".format(input),
-                  "--type={}".format(type),
-                  "--output={}".format(output),
-                  ])
+            call(
+                [
+                    self.configtxlator,
+                    "proto_encode",
+                    f"--input={input}",
+                    f"--type={type}",
+                    f"--output={output}",
+                ]
+            )
         except Exception as e:
             err_msg = "configtxlator proto decode fail! "
             raise Exception(err_msg + str(e))
@@ -45,16 +48,16 @@ class ConfigTxLator:
             config
         """
         try:
-            res = run([self.configtxlator,
-                       "proto_decode",
-                       "--type={}".format(type),
-                       "--input={}".format(input),
-                       ],
-                      capture_output=True)
-            if res.returncode == 0 :
-                return res.stdout
-            else:
-                return res.stderr
+            res = run(
+                [
+                    self.configtxlator,
+                    "proto_decode",
+                    f"--type={type}",
+                    f"--input={input}",
+                ],
+                capture_output=True,
+            )
+            return res.stdout if res.returncode == 0 else res.stderr
         except Exception as e:
             err_msg = "configtxlator proto decode fail! "
             raise Exception(err_msg + str(e))
@@ -71,13 +74,16 @@ class ConfigTxLator:
             output: A file to write the JSON document to.
         """
         try:
-            call([self.configtxlator,
-                  "compute_update",
-                  "--original={}".format(original),
-                  "--updated={}".format(updated),
-                  "--channel_id={}".format(channel_id),
-                  "--output={}".format(output),
-                  ])
+            call(
+                [
+                    self.configtxlator,
+                    "compute_update",
+                    f"--original={original}",
+                    f"--updated={updated}",
+                    f"--channel_id={channel_id}",
+                    f"--output={output}",
+                ]
+            )
         except Exception as e:
             err_msg = "configtxlator compute update fail! "
             raise Exception(err_msg + str(e))

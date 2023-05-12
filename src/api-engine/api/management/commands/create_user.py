@@ -53,6 +53,4 @@ class Command(BaseCommand):
                 user.is_superuser = is_superuser
                 user.set_password(password)
                 user.save()
-        self.stdout.write(
-            self.style.SUCCESS("Create user successfully %s" % user.id)
-        )
+        self.stdout.write(self.style.SUCCESS(f"Create user successfully {user.id}"))

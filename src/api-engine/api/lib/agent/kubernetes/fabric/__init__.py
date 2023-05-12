@@ -24,9 +24,9 @@ class FabricNetwork(NetworkBase):
     def _generate_deployment(self):
         containers = []
         name = str(self._node_id)
-        name = "deploy-%s" % name
+        name = f"deploy-{name}"
         if self._type == FabricNodeType.Ca.name.lower():
-            image = "%s:%s" % (CA_IMAGE_NAME, self._version)
+            image = f"{CA_IMAGE_NAME}:{self._version}"
             environments = [
                 {
                     "name": "FABRIC_CA_HOME",
@@ -50,12 +50,9 @@ class FabricNetwork(NetworkBase):
 
     def _generate_service(self):
         name = str(self._node_id)
-        deploy_name = "deploy-%s" % name
-        service_name = "service-%s" % name
-        ports = []
-        if self._type == FabricNodeType.Ca.name.lower():
-            ports = [7054]
-
+        deploy_name = f"deploy-{name}"
+        service_name = f"service-{name}"
+        ports = [7054] if self._type == FabricNodeType.Ca.name.lower() else []
         return {
             "name": service_name,
             "ports": ports,
@@ -65,12 +62,12 @@ class FabricNetwork(NetworkBase):
 
     def _generate_ingress(self):
         name = str(self._node_id)
-        service_name = "service-%s" % name
-        ingress_name = "ingress-%s" % name
+        service_name = f"service-{name}"
+        ingress_name = f"ingress-{name}"
         ingress_paths = []
         annotations = {"nginx.ingress.kubernetes.io/ssl-redirect": "false"}
         if self._type == FabricNodeType.Ca.name.lower():
-            ingress_paths = [{"port": 7054, "path": "/%s" % name}]
+            ingress_paths = [{"port": 7054, "path": f"/{name}"}]
 
         return {
             "name": ingress_name,
@@ -80,10 +77,8 @@ class FabricNetwork(NetworkBase):
         }
 
     def generate_config(self, *args, **kwargs):
-        config = {
+        return {
             "deployment": self._generate_deployment(),
             "service": self._generate_service(),
             # "ingress": self._generate_ingress(),
         }
-
-        return config

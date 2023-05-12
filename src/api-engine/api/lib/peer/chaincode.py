@@ -10,7 +10,7 @@ from api.config import FABRIC_TOOL, FABRIC_CFG
 
 class ChainCode(BasicEnv):
     def __init__(self, version="2.2.0", peer=FABRIC_TOOL, **kwargs):
-        self.peer = peer + "/peer"
+        self.peer = f"{peer}/peer"
         super(ChainCode, self).__init__(version, **kwargs)
 
     def lifecycle_package(self, cc_name, cc_version, cc_path, language):
@@ -23,12 +23,13 @@ class ChainCode(BasicEnv):
         :return 0 means success.
         """
         try:
-            label = cc_name + "_" + cc_version
-            res = os.system("{} lifecycle chaincode package {}.tar.gz --path {} --lang {} --label {}"
-                            .format(self.peer, cc_name, cc_path, language, label))
+            label = f"{cc_name}_{cc_version}"
+            res = os.system(
+                f"{self.peer} lifecycle chaincode package {cc_name}.tar.gz --path {cc_path} --lang {language} --label {label}"
+            )
             res = res >> 8
         except Exception as e:
-            err_msg = "package chaincode failed for {}!".format(e)
+            err_msg = f"package chaincode failed for {e}!"
             raise Exception(err_msg)
         return res
 
@@ -39,10 +40,10 @@ class ChainCode(BasicEnv):
         :return: 0 means success.
         """
         try:
-            res = os.system("{} lifecycle chaincode install {}".format(self.peer, cc_targz))
+            res = os.system(f"{self.peer} lifecycle chaincode install {cc_targz}")
             res = res >> 8
         except Exception as e:
-            err_msg = "install chaincode failed for {}!".format(e)
+            err_msg = f"install chaincode failed for {e}!"
             raise Exception(err_msg)
         return res
 
@@ -55,9 +56,12 @@ class ChainCode(BasicEnv):
         """
 
         try:
-            res = subprocess.Popen("{} lifecycle chaincode queryinstalled --output json --connTimeout {}"
-                                   .format(self.peer, timeout), shell=True,
-                                   stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            res = subprocess.Popen(
+                f"{self.peer} lifecycle chaincode queryinstalled --output json --connTimeout {timeout}",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
 
             stdout, stderr = res.communicate()
             return_code = res.returncode
@@ -69,7 +73,7 @@ class ChainCode(BasicEnv):
                 stderr = str(stderr, encoding="utf-8")
                 return return_code, stderr
         except Exception as e:
-            err_msg = "query_installed chaincode info failed for {}!".format(e)
+            err_msg = f"query_installed chaincode info failed for {e}!"
             raise Exception(err_msg)
         return return_code, installed_chaincodes
 
@@ -85,16 +89,16 @@ class ChainCode(BasicEnv):
             res_return = 0
             if res == 0:
                 for item in installed['installed_chaincodes']:
-                    res_get = os.system("{} lifecycle chaincode getinstalledpackage --package-id {} "
-                                        "--output-directory {} --connTimeout {}".format(self.peer,
-                                                                                        item['package_id'], FABRIC_CFG, timeout))
+                    res_get = os.system(
+                        f"{self.peer} lifecycle chaincode getinstalledpackage --package-id {item['package_id']} --output-directory {FABRIC_CFG} --connTimeout {timeout}"
+                    )
                     res_get = res_get >> 8
                     res_return = res_return or res_get
             else:
                 print("package_id get failed.")
                 return 1, {}
         except Exception as e:
-            err_msg = "get_installed_package failed for {}!".format(e)
+            err_msg = f"get_installed_package failed for {e}!"
             raise Exception(err_msg)
         return res_return
 
@@ -114,27 +118,32 @@ class ChainCode(BasicEnv):
         """
         try:
             res, installed = self.lifecycle_query_installed("3s")
-            cc_label = cc_name + "_" + chaincode_version
-            package_id = ""
-            for each in installed['installed_chaincodes']:
-                if each['label'] == cc_label:
-                    package_id = each['package_id']
-                    break
+            cc_label = f"{cc_name}_{chaincode_version}"
+            package_id = next(
+                (
+                    each['package_id']
+                    for each in installed['installed_chaincodes']
+                    if each['label'] == cc_label
+                ),
+                "",
+            )
             if package_id == "":
                 return 1, "not exist the chaincode, please check chaincode_name and chaincode_version"
 
             if os.getenv("CORE_PEER_TLS_ENABLED") == "false" or os.getenv("CORE_PEER_TLS_ENABLED") is None:
-                res = subprocess.Popen("{} lifecycle chaincode approveformyorg -o {} - --channelID {} --name {} "
-                                       "--version {} --init-required --package-id {} --sequence {} --signature-policy {}"
-                                       .format(self.peer, orderer_url, channel_name, cc_name, chaincode_version, package_id,
-                                               sequence, policy), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                res = subprocess.Popen(
+                    f"{self.peer} lifecycle chaincode approveformyorg -o {orderer_url} - --channelID {channel_name} --name {cc_name} --version {chaincode_version} --init-required --package-id {package_id} --sequence {sequence} --signature-policy {policy}",
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
             else:
-                res = subprocess.Popen("{} lifecycle chaincode approveformyorg -o {} --tls --cafile {} --channelID {} "
-                                       "--name {} --version {} --init-required --package-id {} --sequence {} "
-                                       "--signature-policy {}"
-                                       .format(self.peer, orderer_url, orderer_tls_rootcert, channel_name,
-                                               cc_name, chaincode_version, package_id, sequence, policy), shell=True,
-                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                res = subprocess.Popen(
+                    f"{self.peer} lifecycle chaincode approveformyorg -o {orderer_url} --tls --cafile {orderer_tls_rootcert} --channelID {channel_name} --name {cc_name} --version {chaincode_version} --init-required --package-id {package_id} --sequence {sequence} --signature-policy {policy}",
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
             stdout, stderr = res.communicate()
             return_code = res.returncode
 
@@ -144,7 +153,7 @@ class ChainCode(BasicEnv):
                 stderr = str(stderr, encoding="utf-8")
                 return return_code, stderr
         except Exception as e:
-            err_msg = "lifecycle_approve_for_my_org failed for {}!".format(e)
+            err_msg = f"lifecycle_approve_for_my_org failed for {e}!"
             raise Exception(err_msg)
         return return_code, content
 
@@ -157,9 +166,12 @@ class ChainCode(BasicEnv):
         """
 
         try:
-            res = subprocess.Popen("{} lifecycle chaincode queryapproved --output json --channelID {}"
-                                   " --name {}".format(self.peer, channel_name, cc_name),
-                                   shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            res = subprocess.Popen(
+                f"{self.peer} lifecycle chaincode queryapproved --output json --channelID {channel_name} --name {cc_name}",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
             stdout, stderr = res.communicate()
             return_code = res.returncode
             if return_code == 0:
@@ -169,7 +181,7 @@ class ChainCode(BasicEnv):
                 stderr = str(stderr, encoding="utf-8")
                 return return_code, stderr
         except Exception as e:
-            err_msg = "lifecycle_query_approved failed for {}!".format(e)
+            err_msg = f"lifecycle_query_approved failed for {e}!"
             raise Exception(err_msg)
 
         return return_code, chaincodes_info
@@ -189,38 +201,30 @@ class ChainCode(BasicEnv):
         """
         try:
             if os.getenv("CORE_PEER_TLS_ENABLED") == "false" or os.getenv("CORE_PEER_TLS_ENABLED") is None:
-                res = subprocess.Popen("{} lifecycle chaincode checkcommitreadiness --output json "
-                                       " --channelID {}  --name {} --version {} --init-required --sequence {} "
-                                       "--signature-policy {}"
-                                       .format(self.peer, channel_name, cc_name, cc_version, sequence, policy),
-                                       shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = res.communicate()
-                return_code = res.returncode
-                if return_code == 0:
-                    content = str(stdout, encoding="utf-8")
-                    chaincodes_info = json.loads(content)
-                    return return_code, chaincodes_info
-                else:
-                    stderr = str(stderr, encoding="utf-8")
-                    return return_code, stderr
+                res = subprocess.Popen(
+                    f"{self.peer} lifecycle chaincode checkcommitreadiness --output json  --channelID {channel_name}  --name {cc_name} --version {cc_version} --init-required --sequence {sequence} --signature-policy {policy}",
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
             else:
-                res = subprocess.Popen("{} lifecycle chaincode checkcommitreadiness --output json "
-                                       "-o {} --tls --cafile {} --channelID {}  --name {} --version {} "
-                                       "--signature-policy {} --init-required --sequence {}"
-                                       .format(self.peer, orderer_url, orderer_tls_rootcert, channel_name, cc_name,
-                                               cc_version, policy, sequence),
-                                       shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                stdout, stderr = res.communicate()
-                return_code = res.returncode
-                if return_code == 0:
-                    content = str(stdout, encoding="utf-8")
-                    chaincodes_info = json.loads(content)
-                    return return_code, chaincodes_info
-                else:
-                    stderr = str(stderr, encoding="utf-8")
-                    return return_code, stderr
+                res = subprocess.Popen(
+                    f"{self.peer} lifecycle chaincode checkcommitreadiness --output json -o {orderer_url} --tls --cafile {orderer_tls_rootcert} --channelID {channel_name}  --name {cc_name} --version {cc_version} --signature-policy {policy} --init-required --sequence {sequence}",
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
+            stdout, stderr = res.communicate()
+            return_code = res.returncode
+            if return_code == 0:
+                content = str(stdout, encoding="utf-8")
+                chaincodes_info = json.loads(content)
+                return return_code, chaincodes_info
+            else:
+                stderr = str(stderr, encoding="utf-8")
+                return return_code, stderr
         except Exception as e:
-            err_msg = "lifecycle_check_commit_readiness failed for {}!".format(e)
+            err_msg = f"lifecycle_check_commit_readiness failed for {e}!"
             raise Exception(err_msg)
 
     def lifecycle_commit(self, orderer_url, orderer_tls_rootcert, channel_name, cc_name, chaincode_version,
@@ -242,22 +246,21 @@ class ChainCode(BasicEnv):
         try:
             peer_addresses_format = " --peerAddresses {} --tlsRootCertFiles {}"
             command_str_with_tls = "{} lifecycle chaincode commit -o {} --tls --cafile {} " \
-                                   "--channelID {} --name {} --version {} --init-required --sequence {} " \
-                                   "--signature-policy {}"
+                                       "--channelID {} --name {} --version {} --init-required --sequence {} " \
+                                       "--signature-policy {}"
             command_str_without_tls = "{} lifecycle chaincode commit -o {} --channelID {} --name {} " \
-                                      "--version {} --init-required --sequence {} --signature-policy {}"
+                                          "--version {} --init-required --sequence {} --signature-policy {}"
 
             peer_addressed = []
             for i in range(len(peerlist)):
-                peer_addressed.append(peerlist[i])
-                peer_addressed.append(peer_root_certs[i])
+                peer_addressed.extend((peerlist[i], peer_root_certs[i]))
             if os.getenv("CORE_PEER_TLS_ENABLED") == "false" or os.getenv("CORE_PEER_TLS_ENABLED") is None:
-                for i in range(len(peerlist)):
+                for _ in range(len(peerlist)):
                     command_str_without_tls = command_str_without_tls + peer_addresses_format
                 res = os.system(command_str_without_tls.format(self.peer, orderer_url, channel_name, cc_name,
                                 chaincode_version, sequency, policy, *peer_addressed))      # --collections-config {}
             else:
-                for i in range(len(peerlist)):
+                for _ in range(len(peerlist)):
                     command_str_with_tls = command_str_with_tls + peer_addresses_format
 
                 res = os.system(command_str_with_tls.format(self.peer, orderer_url, orderer_tls_rootcert, channel_name,
@@ -267,7 +270,7 @@ class ChainCode(BasicEnv):
             return res
 
         except Exception as e:
-            err_msg = "lifecycle_commit failed for {}!".format(e)
+            err_msg = f"lifecycle_commit failed for {e}!"
             raise Exception(err_msg)
 
     def lifecycle_query_committed(self, channel_name, cc_name):
@@ -278,9 +281,12 @@ class ChainCode(BasicEnv):
         :return: chaincodes info has commited in channel of the cc_name
         """
         try:
-            res = subprocess.Popen("{} lifecycle chaincode querycommitted --channelID {} "
-                                   "--output json --name {}".format(self.peer, channel_name, cc_name),
-                                   shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            res = subprocess.Popen(
+                f"{self.peer} lifecycle chaincode querycommitted --channelID {channel_name} --output json --name {cc_name}",
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
             stdout, stderr = res.communicate()
             return_code = res.returncode
             if return_code == 0:
@@ -291,7 +297,7 @@ class ChainCode(BasicEnv):
                 stderr = str(stderr, encoding="utf-8")
                 return return_code, stderr
         except Exception as e:
-            err_msg = "lifecycle_query_committed failed for {}!".format(e)
+            err_msg = f"lifecycle_query_committed failed for {e}!"
             raise Exception(err_msg)
 
     def invoke(self, orderer_url, orderer_tls_rootcert, channel_name, cc_name, args, init=False):
@@ -314,51 +320,46 @@ class ChainCode(BasicEnv):
                 invoke_command = "{} chaincode invoke -o {} --channelID {} --name {} -c '{}'"
                 invoke_command_tls = "{} chaincode invoke -o {} --tls --cafile {} --channelID {} --name {} -c '{}'"
 
-            if os.getenv("CORE_PEER_TLS_ENABLED") == "false" or os.getenv("CORE_PEER_TLS_ENABLED") is None:
-                if self.version in BasicEnv.binary_versions_v2:
+            if self.version in BasicEnv.binary_versions_v2:
+                if os.getenv("CORE_PEER_TLS_ENABLED") == "false" or os.getenv("CORE_PEER_TLS_ENABLED") is None:
                     res = subprocess.Popen(invoke_command.format(self.peer, orderer_url, channel_name, cc_name, args),
                                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    stdout, stderr = res.communicate()
-                    return_code = res.returncode
-                    if return_code == 0:
-                        return return_code, ''
-                    else:
-                        stderr = str(stderr, encoding="utf-8")
-                        return return_code, stderr
-            else:
-                if self.version in BasicEnv.binary_versions_v2:
+                else:
                     res = subprocess.Popen(invoke_command_tls.format(self.peer, orderer_url, orderer_tls_rootcert,
                                                                      channel_name, cc_name, args),
                                            shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    stdout, stderr = res.communicate()
-                    return_code = res.returncode
-                    if return_code == 0:
-                        return return_code, ''
-                    else:
-                        stderr = str(stderr, encoding="utf-8")
-                        return return_code, stderr
+                stdout, stderr = res.communicate()
+                return_code = res.returncode
+                if return_code == 0:
+                    return return_code, ''
+                stderr = str(stderr, encoding="utf-8")
+                return return_code, stderr
         except Exception as e:
-            err_msg = "invoke failed for {}!".format(e)
+            err_msg = f"invoke failed for {e}!"
             raise Exception(err_msg)
 
     def query(self, orderer_url, orderer_tls_rootcert, channel_name, cc_name, args):
         try:
             if os.getenv("CORE_PEER_TLS_ENABLED") == "false" or os.getenv("CORE_PEER_TLS_ENABLED") is None:
-                res = subprocess.Popen("{} chaincode query -o {} --channelID {} --name {} -c '{}'"
-                                       .format(self.peer, orderer_url, channel_name, cc_name, args),
-                                       shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                res = subprocess.Popen(
+                    f"{self.peer} chaincode query -o {orderer_url} --channelID {channel_name} --name {cc_name} -c '{args}'",
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
                 stdout, stderr = res.communicate()
                 return_code = res.returncode
                 if return_code == 0:
                     return return_code, ''
-                else:
-                    stderr = str(stderr, encoding="utf-8")
-                    return return_code, stderr
+                stderr = str(stderr, encoding="utf-8")
+                return return_code, stderr
             else:
-                res = subprocess.Popen("{} chaincode query -o {} --tls --cafile {} --channelID {}"
-                                       " --name {} -c '{}'".format(self.peer, orderer_url, orderer_tls_rootcert,
-                                                                   channel_name, cc_name, args),
-                                       shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                res = subprocess.Popen(
+                    f"{self.peer} chaincode query -o {orderer_url} --tls --cafile {orderer_tls_rootcert} --channelID {channel_name} --name {cc_name} -c '{args}'",
+                    shell=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                )
                 stdout, stderr = res.communicate()
                 return_code = res.returncode
                 if return_code == 0:
@@ -369,5 +370,5 @@ class ChainCode(BasicEnv):
                     stderr = str(stderr, encoding="utf-8")
                     return return_code, stderr
         except Exception as e:
-            err_msg = "query failed for {}!".format(e)
+            err_msg = f"query failed for {e}!"
             raise Exception(err_msg)

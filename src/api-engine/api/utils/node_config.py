@@ -75,14 +75,11 @@ class NodeConfig:
         :rtype: string
         """
         if node_type == "peer":
-            dst = "{}/{}/crypto-config/peerOrganizations/{}/peers/{}.{}/{}"\
-                .format(CELLO_HOME, self.org, self.org, node, self.org, self.peer_file)
+            return f"{CELLO_HOME}/{self.org}/crypto-config/peerOrganizations/{self.org}/peers/{node}.{self.org}/{self.peer_file}"
         elif node_type == "orderer":
-            dst = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}.{}/{}"\
-                .format(CELLO_HOME, self.org, self.org.split(".", 1)[1], node, self.org.split(".", 1)[1], self.orderer_file)
+            return f'{CELLO_HOME}/{self.org}/crypto-config/ordererOrganizations/{self.org.split(".", 1)[1]}/orderers/{node}.{self.org.split(".", 1)[1]}/{self.orderer_file}'
         else:
-            dst = ""
-        return dst
+            return ""
 
     def peer(self, node, **kwargs):
         """

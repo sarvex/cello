@@ -67,7 +67,7 @@ class OrganizationViewSet(viewsets.ViewSet):
             name = serializer.validated_data.get("name")
             parameters = {}
             if name:
-                parameters.update({"name__icontains": name})
+                parameters["name__icontains"] = name
             organizations = Organization.objects.filter(**parameters)
             p = Paginator(organizations, per_page)
             organizations = p.page(page)
@@ -145,12 +145,13 @@ class OrganizationViewSet(viewsets.ViewSet):
         :return: null
         """
         for i in range(num):
-            nodeName = "peer" + \
-                str(i) if nodeType == "peer" else "orderer" + str(i)
+            nodeName = (
+                "peer" + str(i) if nodeType == "peer" else f"orderer{str(i)}"
+            )
             self._generate_config(nodeType, org.name, nodeName)
             msp, tls, cfg = self._conversion_msp_tls_cfg(
                 nodeType, org.name, nodeName)
-            urls = "{}.{}".format(nodeName, org.name)
+            urls = f"{nodeName}.{org.name}"
             node = Node(
                 name=nodeName,
                 organization=org,
@@ -175,27 +176,24 @@ class OrganizationViewSet(viewsets.ViewSet):
         """
         try:
             if type == "peer":
-                dir_node = "{}/{}/crypto-config/peerOrganizations/{}/peers/{}/" \
-                    .format(CELLO_HOME, org, org, node + "." + org)
+                dir_node = f"{CELLO_HOME}/{org}/crypto-config/peerOrganizations/{org}/peers/{node}.{org}/"
                 name = "core.yaml"
                 cname = "peer_config.zip"
             else:
-                dir_node = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}/" \
-                    .format(CELLO_HOME, org, org.split(".", 1)[1], node + "." + org.split(".", 1)[1])
+                dir_node = f'{CELLO_HOME}/{org}/crypto-config/ordererOrganizations/{org.split(".", 1)[1]}/orderers/{f"{node}." + org.split(".", 1)[1]}/'
                 name = "orderer.yaml"
                 cname = "orderer_config.zip"
 
-            zip_dir("{}msp".format(dir_node), "{}msp.zip".format(dir_node))
-            with open("{}msp.zip".format(dir_node), "rb") as f_msp:
+            zip_dir(f"{dir_node}msp", f"{dir_node}msp.zip")
+            with open(f"{dir_node}msp.zip", "rb") as f_msp:
                 msp = base64.b64encode(f_msp.read())
 
-            zip_dir("{}tls".format(dir_node), "{}tls.zip".format(dir_node))
-            with open("{}tls.zip".format(dir_node), "rb") as f_tls:
+            zip_dir(f"{dir_node}tls", f"{dir_node}tls.zip")
+            with open(f"{dir_node}tls.zip", "rb") as f_tls:
                 tls = base64.b64encode(f_tls.read())
 
-            zip_file("{}{}".format(dir_node, name),
-                     "{}{}".format(dir_node, cname))
-            with open("{}{}".format(dir_node, cname), "rb") as f_cfg:
+            zip_file(f"{dir_node}{name}", f"{dir_node}{cname}")
+            with open(f"{dir_node}{cname}", "rb") as f_cfg:
                 cfg = base64.b64encode(f_cfg.read())
         except Exception as e:
             raise e
@@ -215,23 +213,20 @@ class OrganizationViewSet(viewsets.ViewSet):
         """
         args = {}
         if type == "peer":
-            args.update({"peer_id": "{}.{}".format(node, org)})
-            args.update({"peer_address": "{}.{}:{}".format(node, org, 7051)})
-            args.update(
-                {"peer_gossip_externalEndpoint": "{}.{}:{}".format(node, org, 7051)})
-            args.update(
-                {"peer_chaincodeAddress": "{}.{}:{}".format(node, org, 7052)})
-            args.update({"peer_tls_enabled": True})
-            args.update({"peer_localMspId": "{}MSP".format(org.capitalize())})
+            args["peer_id"] = f"{node}.{org}"
+            args["peer_address"] = f"{node}.{org}:7051"
+            args["peer_gossip_externalEndpoint"] = f"{node}.{org}:7051"
+            args["peer_chaincodeAddress"] = f"{node}.{org}:7052"
+            args["peer_tls_enabled"] = True
+            args["peer_localMspId"] = f"{org.capitalize()}MSP"
 
             a = NodeConfig(org)
             a.peer(node, **args)
         else:
-            args.update({"General_ListenPort": 7050})
-            args.update(
-                {"General_LocalMSPID": "{}OrdererMSP".format(org.capitalize())})
-            args.update({"General_TLS_Enabled": True})
-            args.update({"General_BootstrapFile": "genesis.block"})
+            args["General_ListenPort"] = 7050
+            args["General_LocalMSPID"] = f"{org.capitalize()}OrdererMSP"
+            args["General_TLS_Enabled"] = True
+            args["General_BootstrapFile"] = "genesis.block"
 
             a = NodeConfig(org)
             a.orderer(node, **args)
@@ -245,15 +240,14 @@ class OrganizationViewSet(viewsets.ViewSet):
         :rtype: bytes
         """
         try:
-            dir_org = "{}/{}/crypto-config/peerOrganizations/{}/" \
-                .format(CELLO_HOME, name, name)
+            dir_org = f"{CELLO_HOME}/{name}/crypto-config/peerOrganizations/{name}/"
 
-            zip_dir("{}msp".format(dir_org), "{}msp.zip".format(dir_org))
-            with open("{}msp.zip".format(dir_org), "rb") as f_msp:
+            zip_dir(f"{dir_org}msp", f"{dir_org}msp.zip")
+            with open(f"{dir_org}msp.zip", "rb") as f_msp:
                 msp = base64.b64encode(f_msp.read())
 
-            zip_dir("{}tlsca".format(dir_org), "{}tls.zip".format(dir_org))
-            with open("{}tls.zip".format(dir_org), "rb") as f_tls:
+            zip_dir(f"{dir_org}tlsca", f"{dir_org}tls.zip")
+            with open(f"{dir_org}tls.zip", "rb") as f_tls:
                 tls = base64.b64encode(f_tls.read())
         except Exception as e:
             raise e
@@ -284,7 +278,7 @@ class OrganizationViewSet(viewsets.ViewSet):
             # ).count()
             # if user_count > 0:
             #     raise ResourceInUse
-            path = "{}/{}".format(CELLO_HOME, organization.name)
+            path = f"{CELLO_HOME}/{organization.name}"
             if os.path.exists(path):
                 shutil.rmtree(path, True)
             organization.delete()
@@ -355,7 +349,7 @@ class OrganizationViewSet(viewsets.ViewSet):
             name = serializer.validated_data.get("name")
             parameter = {"organization": organization}
             if name:
-                parameter.update({"username__icontains": name})
+                parameter["username__icontains"] = name
             users = UserProfile.objects.filter(**parameter)
             p = Paginator(users, per_page)
             users = p.page(page)

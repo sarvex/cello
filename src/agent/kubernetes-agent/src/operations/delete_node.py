@@ -31,23 +31,16 @@ def _delete_fabric_node():
         node_id=NODE_ID,
     )
     deployment = network.deployment()
-    service = network.service()
-    # config = network.generate_config()
-    #
-    # deployment = config.get("deployment")
-    # service = config.get("service")
-    # ingress = config.get("ingress")
-
-    deploy_name = None
-    if service:
+    if service := network.service():
         k8s_client.delete_service(namespace=AGENT_ID, name=service.get("name"))
+    deploy_name = None
     if deployment:
         k8s_client.delete_deployment(
             namespace=AGENT_ID, name=deployment.get("name")
         )
         deploy_name = deployment.get("name")
 
-    for i in range(1, MAX_QUERY_RETRY):
+    for _ in range(1, MAX_QUERY_RETRY):
         pod = k8s_client.get_pod(AGENT_ID, deploy_name)
         if pod is None:
             requests.put(

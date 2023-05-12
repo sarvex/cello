@@ -112,17 +112,15 @@ class NodeViewSet(viewsets.ViewSet):
                 query_filter = {}
 
                 if node_type:
-                    query_filter.update({"type": node_type})
+                    query_filter["type"] = node_type
                 if name:
-                    query_filter.update({"name__icontains": name})
+                    query_filter["name__icontains"] = name
                 if request.user.is_admin:
-                    query_filter.update(
-                        {"organization": request.user.organization}
-                    )
+                    query_filter["organization"] = request.user.organization
                 # elif request.user.is_common_user:
                 #     query_filter.update({"user": request.user})
                 if agent_id:
-                    query_filter.update({"agent__id": agent_id})
+                    query_filter["agent__id"] = agent_id
                 nodes = Node.objects.filter(**query_filter)
                 p = Paginator(nodes, per_page)
                 nodes = p.page(page)
@@ -152,9 +150,9 @@ class NodeViewSet(viewsets.ViewSet):
                 raise ResourceExists
         hosts = ca.get("hosts", [])
         if admin_name:
-            ca_body.update({"admin_name": admin_name})
+            ca_body["admin_name"] = admin_name
         if admin_password:
-            ca_body.update({"admin_password": admin_password})
+            ca_body["admin_password"] = admin_password
         fabric_ca = FabricCA(**ca_body, hosts=hosts, type=ca_server_type)
         fabric_ca.save()
 
@@ -172,13 +170,11 @@ class NodeViewSet(viewsets.ViewSet):
 
         body = {"name": name, "local_msp_id": local_msp_id}
         if gossip_use_leader_reflection is not None:
-            body.update(
-                {"gossip_use_leader_reflection": gossip_use_leader_reflection}
-            )
+            body["gossip_use_leader_reflection"] = gossip_use_leader_reflection
         if gossip_org_leader is not None:
-            body.update({"gossip_org_leader": gossip_org_leader})
+            body["gossip_org_leader"] = gossip_org_leader
         if gossip_skip_handshake is not None:
-            body.update({"gossip_skip_handshake": gossip_skip_handshake})
+            body["gossip_skip_handshake"] = gossip_skip_handshake
 
         fabric_peer = FabricPeer(**body)
         fabric_peer.save()
@@ -193,28 +189,21 @@ class NodeViewSet(viewsets.ViewSet):
             ca_body = {"peer": fabric_peer}
             ca_node_dict = {}
             if node is not None:
-                ca_body.update({"node": node})
-                port = Port.objects.filter(node=node, internal=7054).first()
-                if port:
-                    ca_node_dict.update(
-                        {"address": "%s:%s" % (node.agent.ip, port.external)}
-                    )
-                ca_node_dict.update(
-                    {
-                        "type": node.ca.type,
-                        "certificate": request.build_absolute_uri(
-                            node.file.url
-                        ),
-                    }
-                )
+                ca_body["node"] = node
+                if port := Port.objects.filter(node=node, internal=7054).first():
+                    ca_node_dict["address"] = f"{node.agent.ip}:{port.external}"
+                ca_node_dict |= {
+                    "type": node.ca.type,
+                    "certificate": request.build_absolute_uri(node.file.url),
+                }
             else:
                 update_body = {
                     "address": address,
                     "certificate": certificate,
                     "type": ca_type,
                 }
-                ca_body.update(update_body)
-                ca_node_dict.update(update_body)
+                ca_body |= update_body
+                ca_node_dict |= update_body
 
             peer_ca = PeerCa(**ca_body)
             peer_ca.save()
@@ -230,28 +219,26 @@ class NodeViewSet(viewsets.ViewSet):
                 user_type = ca_user.get("type")
 
                 if user is not None:
-                    ca_user_body.update({"user": user})
-                    user_dict.update(
-                        {
-                            "username": user.name,
-                            "password": user.secret,
-                            "type": user.user_type,
-                        }
-                    )
+                    ca_user_body["user"] = user
+                    user_dict |= {
+                        "username": user.name,
+                        "password": user.secret,
+                        "type": user.user_type,
+                    }
                 else:
                     update_body = {
                         "username": username,
                         "password": password,
                         "type": user_type,
                     }
-                    ca_user_body.update(update_body)
-                    user_dict.update(update_body)
+                    ca_user_body |= update_body
+                    user_dict |= update_body
                 user_list.append(user_dict)
 
                 ca_user_obj = PeerCaUser(**ca_user_body)
                 ca_user_obj.save()
 
-            ca_node_dict.update({"users": user_list})
+            ca_node_dict["users"] = user_list
 
             ca_nodes_list.append(ca_node_dict)
 
@@ -280,18 +267,17 @@ class NodeViewSet(viewsets.ViewSet):
                 organization = request.user.organization
 
                 agent = organization.agent.get()
-                if agent:
-                    nodes = Node.objects.filter(
-                        name=node_name + "0", organization=organization, type=node_type)
-                    if nodes:
-                        raise ResourceExists
-                else:
+                if not agent:
                     raise NoResource
+                if nodes := Node.objects.filter(
+                    name=f"{node_name}0", organization=organization, type=node_type
+                ):
+                    raise ResourceExists
                 for n in range(num):
 
                     name = node_name + str(n)
 
-                    urls = "{}.{}".format(name, organization.name)
+                    urls = f"{name}.{organization.name}"
                     nodes = {
                         "type": node_type,
                         "Specs": [name]
@@ -370,27 +356,24 @@ class NodeViewSet(viewsets.ViewSet):
         """
         try:
             if type == "peer":
-                dir_node = "{}/{}/crypto-config/peerOrganizations/{}/peers/{}/" \
-                    .format(CELLO_HOME, org, org, node + "." + org)
+                dir_node = f"{CELLO_HOME}/{org}/crypto-config/peerOrganizations/{org}/peers/{node}.{org}/"
                 name = "core.yaml"
                 cname = "peer_config.zip"
             else:
-                dir_node = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}/" \
-                    .format(CELLO_HOME, org, org.split(".", 1)[1], node + "." + org.split(".", 1)[1])
+                dir_node = f'{CELLO_HOME}/{org}/crypto-config/ordererOrganizations/{org.split(".", 1)[1]}/orderers/{f"{node}." + org.split(".", 1)[1]}/'
                 name = "orderer.yaml"
                 cname = "orderer_config.zip"
 
-            zip_dir("{}msp".format(dir_node), "{}msp.zip".format(dir_node))
-            with open("{}msp.zip".format(dir_node), "rb") as f_msp:
+            zip_dir(f"{dir_node}msp", f"{dir_node}msp.zip")
+            with open(f"{dir_node}msp.zip", "rb") as f_msp:
                 msp = base64.b64encode(f_msp.read())
 
-            zip_dir("{}tls".format(dir_node), "{}tls.zip".format(dir_node))
-            with open("{}tls.zip".format(dir_node), "rb") as f_tls:
+            zip_dir(f"{dir_node}tls", f"{dir_node}tls.zip")
+            with open(f"{dir_node}tls.zip", "rb") as f_tls:
                 tls = base64.b64encode(f_tls.read())
 
-            zip_file("{}{}".format(dir_node, name),
-                     "{}{}".format(dir_node, cname))
-            with open("{}{}".format(dir_node, cname), "rb") as f_cfg:
+            zip_file(f"{dir_node}{name}", f"{dir_node}{cname}")
+            with open(f"{dir_node}{cname}", "rb") as f_cfg:
                 cfg = base64.b64encode(f_cfg.read())
         except Exception as e:
             raise e
@@ -410,27 +393,23 @@ class NodeViewSet(viewsets.ViewSet):
         """
         args = {}
         if type == "peer":
-            args.update({"peer_id": "{}.{}".format(node, org)})
-            args.update({"peer_address": "{}.{}:{}".format(node, org, 7051)})
-            args.update(
-                {"peer_gossip_externalEndpoint": "{}.{}:{}".format(node, org, 7051)})
-            args.update(
-                {"peer_chaincodeAddress": "{}.{}:{}".format(node, org, 7052)})
-            args.update({"peer_tls_enabled": True})
-            args.update({"peer_localMspId": "{}MSP".format(org.capitalize())})
+            args["peer_id"] = f"{node}.{org}"
+            args["peer_address"] = f"{node}.{org}:7051"
+            args["peer_gossip_externalEndpoint"] = f"{node}.{org}:7051"
+            args["peer_chaincodeAddress"] = f"{node}.{org}:7052"
+            args["peer_tls_enabled"] = True
+            args["peer_localMspId"] = f"{org.capitalize()}MSP"
 
             a = NodeConfig(org)
             a.peer(node, **args)
         else:
-            args.update({"General_ListenPort": 7050})
-            args.update(
-                {"General_LocalMSPID": "{}OrdererMSP".format(org.capitalize())})
-            args.update({"General_TLS_Enabled": True})
-            args.update({"General_BootstrapFile": "genesis.block"})
+            args["General_ListenPort"] = 7050
+            args["General_LocalMSPID"] = f"{org.capitalize()}OrdererMSP"
+            args["General_TLS_Enabled"] = True
+            args["General_BootstrapFile"] = "genesis.block"
 
             a = NodeConfig(org)
             a.orderer(node, **args)
-        pass
 
     def _agent_params(self, pk):
         """
@@ -453,23 +432,22 @@ class NodeViewSet(viewsets.ViewSet):
             if ports is None:
                 raise ResourceNotFound
 
-            info = {}
             org_name = org.name if node.type == "peer" else org.name.split(".", 1)[
                 1]
-            # get info of node, e.g, tls, msp, config.
-            info["status"] = node.status
-            info["msp"] = node.msp
-            info["tls"] = node.tls
-            info["config_file"] = node.config_file
-            info["type"] = node.type
-            info["name"] = "{}.{}".format(node.name, org_name)
-            info["bootstrap_block"] = network.genesisblock
-            info["urls"] = agent.urls
-            info["network_type"] = network.type
-            info["agent_type"] = agent.type
-            info["container_name"] = "{}.{}".format(node.name, org_name)
-            info["ports"] = ports
-            return info
+            return {
+                "status": node.status,
+                "msp": node.msp,
+                "tls": node.tls,
+                "config_file": node.config_file,
+                "type": node.type,
+                "name": f"{node.name}.{org_name}",
+                "bootstrap_block": network.genesisblock,
+                "urls": agent.urls,
+                "network_type": network.type,
+                "agent_type": agent.type,
+                "container_name": f"{node.name}.{org_name}",
+                "ports": ports,
+            }
         except Exception as e:
             raise e
 
@@ -483,8 +461,7 @@ class NodeViewSet(viewsets.ViewSet):
             node_qs = Node.objects.filter(id=pk)
             infos = self._agent_params(pk)
             agent = AgentHandler(infos)
-            cid = agent.create(infos)
-            if cid:
+            if cid := agent.create(infos):
                 node_qs.update(cid=cid, status="running")
             else:
                 raise ResourceNotFound
@@ -514,14 +491,14 @@ class NodeViewSet(viewsets.ViewSet):
 
                 if action == "start" and node_status == "paused":
                     node_qs.update(status="restarting")
-                    res = True if agent.start() else False
+                    res = bool(agent.start())
                     if res:
                         node_qs.update(status="running")
                     return Response(
                         ok({"restart": res}), status=status.HTTP_201_CREATED
                     )
                 elif action == "stop" and node_status == "running":
-                    res = True if agent.stop() else False
+                    res = bool(agent.stop())
                     if res:
                         node_qs.update(status="paused")
                     return Response(
@@ -563,21 +540,16 @@ class NodeViewSet(viewsets.ViewSet):
                     if orderer_cnt == 1:
                         raise ResourceInUse
                 agent.stop()
-                res = True if agent.delete() else False
-                if res:
-                    fabric_path = "{}/{}".format(FABRIC_NODE,
-                                                 infos["container_name"])
-                    if os.path.exists(fabric_path):
-                        shutil.rmtree(fabric_path, True)
-                    prod_path = "{}/{}".format(PRODUCTION_NODE,
-                                               infos["container_name"])
-                    if os.path.exists(prod_path):
-                        shutil.rmtree(prod_path, True)
-                    node.delete()
-                    # node.status = "exited"
-                    # node.save()
-                else:
+                res = bool(agent.delete())
+                if not res:
                     return Response(ok({"delete": False}), status=status.HTTP_202_ACCEPTED)
+                fabric_path = f'{FABRIC_NODE}/{infos["container_name"]}'
+                if os.path.exists(fabric_path):
+                    shutil.rmtree(fabric_path, True)
+                prod_path = f'{PRODUCTION_NODE}/{infos["container_name"]}'
+                if os.path.exists(prod_path):
+                    shutil.rmtree(prod_path, True)
+                node.delete()
             except ObjectDoesNotExist:
                 raise ResourceNotFound
             return Response(ok({"delete": True}), status=status.HTTP_202_ACCEPTED)
@@ -718,13 +690,11 @@ class NodeViewSet(viewsets.ViewSet):
                 raise ResourceNotFound
             # Get file locations based on node type
             if node.type == "peer":
-                dir_node = "{}/{}/crypto-config/peerOrganizations/{}/peers/{}/" \
-                    .format(CELLO_HOME, org, org, node.name + "." + org)
+                dir_node = f"{CELLO_HOME}/{org}/crypto-config/peerOrganizations/{org}/peers/{node.name}.{org}/"
                 cname = "peer_config.zip"
                 name = "core.yaml"
             else:
-                dir_node = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}/" \
-                    .format(CELLO_HOME, org, org.split(".", 1)[1], node.name + "." + org.split(".", 1)[1])
+                dir_node = f'{CELLO_HOME}/{org}/crypto-config/ordererOrganizations/{org.split(".", 1)[1]}/orderers/{f"{node.name}." + org.split(".", 1)[1]}/'
                 cname = "orderer_config.zip"
                 name = "orderer.yaml"
         except Exception as e:
@@ -734,11 +704,10 @@ class NodeViewSet(viewsets.ViewSet):
         if request.method == "GET":
             # Get the config file from local storage
             try:
-                config_file = open("{}{}".format(dir_node, cname), "rb")
+                config_file = open(f"{dir_node}{cname}", "rb")
                 response = HttpResponse(
                     config_file, content_type="application/zip")
-                response['Content-Disposition'] = "attachment; filename={}".format(
-                    cname)
+                response['Content-Disposition'] = f"attachment; filename={cname}"
                 return response
             except Exception as e:
                 raise e
@@ -750,16 +719,15 @@ class NodeViewSet(viewsets.ViewSet):
                     yaml.safe_load(new_config_file)
                 except yaml.YAMLError:
                     return Response(err("Unable to parse this YAML file."), status=status.HTTP_400_BAD_REQUEST)
-                if os.path.exists("{}{}".format(dir_node, name)):
-                    os.remove("{}{}".format(dir_node, name))
-                with open("{}{}".format(dir_node, name), 'wb+') as f:
+                if os.path.exists(f"{dir_node}{name}"):
+                    os.remove(f"{dir_node}{name}")
+                with open(f"{dir_node}{name}", 'wb+') as f:
                     for chunk in new_config_file.chunks():
                         f.write(chunk)
-                if os.path.exists("{}{}".format(dir_node, cname)):
-                    os.remove("{}{}".format(dir_node, cname))
-                zip_file("{}{}".format(dir_node, name),
-                         "{}{}".format(dir_node, cname))
-                with open("{}{}".format(dir_node, cname), "rb") as f_cfg:
+                if os.path.exists(f"{dir_node}{cname}"):
+                    os.remove(f"{dir_node}{cname}")
+                zip_file(f"{dir_node}{name}", f"{dir_node}{cname}")
+                with open(f"{dir_node}{cname}", "rb") as f_cfg:
                     cfg = base64.b64encode(f_cfg.read())
                 node.config_file = cfg
                 node.save()
@@ -786,8 +754,7 @@ class NodeViewSet(viewsets.ViewSet):
             except ObjectDoesNotExist:
                 raise ResourceNotFound
             envs = init_env_vars(node, organization)
-            block_path = "{}/{}/crypto-config/peerOrganizations/{}/peers/{}/{}.block" \
-                .format(CELLO_HOME, org, org, node.name + "." + org, "channel")
+            block_path = f"{CELLO_HOME}/{org}/crypto-config/peerOrganizations/{org}/peers/{node.name}.{org}/channel.block"
             uploaded_block_file = request.data['file']
             with open(block_path, 'wb+') as f:
                 for chunk in uploaded_block_file.chunks():
@@ -863,11 +830,11 @@ class NodeViewSet(viewsets.ViewSet):
             user_status = serializer.validated_data.get("status")
             query_param = {"node__id": pk}
             if name is not None:
-                query_param.update({"name__icontains": name})
+                query_param["name__icontains"] = name
             if user_type is not None:
-                query_param.update({"user_type": user_type})
+                query_param["user_type"] = user_type
             if user_status is not None:
-                query_param.update({"status": user_status})
+                query_param["status"] = user_status
 
             users = NodeUser.objects.filter(**query_param)
             p = Paginator(users, per_page)

@@ -19,8 +19,7 @@ def paginate_list(data=None, page=1, per_page=10, limit=None):
         page = page if page <= last_page else last_page
         data = p.page(page)
         total = p.count
-    else:
-        if limit:
-            data = data[:limit]
+    elif limit:
+        data = data[:limit]
 
     return data, total

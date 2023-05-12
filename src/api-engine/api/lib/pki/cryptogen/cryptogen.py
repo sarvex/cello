@@ -17,7 +17,7 @@ class CryptoGen:
                     filepath: cello's working directory
                 return:
         """
-        self.cryptogen = cryptogen + "/cryptogen"
+        self.cryptogen = f"{cryptogen}/cryptogen"
         self.filepath = filepath
         self.version = version
         self.name = name
@@ -30,10 +30,16 @@ class CryptoGen:
                 return:
         """
         try:
-            call([self.cryptogen, "generate", "--output={}/{}/{}".format(self.filepath, self.name, output),
-                  "--config={}/{}/{}".format(self.filepath, self.name, config)])
+            call(
+                [
+                    self.cryptogen,
+                    "generate",
+                    f"--output={self.filepath}/{self.name}/{output}",
+                    f"--config={self.filepath}/{self.name}/{config}",
+                ]
+            )
         except Exception as e:
-            err_msg = "cryptogen generate fail for {}!".format(e)
+            err_msg = f"cryptogen generate fail for {e}!"
             raise Exception(err_msg)
 
     def extend(self, input="crypto-config", config="crypto-config.yaml"):
@@ -44,8 +50,14 @@ class CryptoGen:
                 return:
         """
         try:
-            call([self.cryptogen, "extend", "--input={}/{}/{}".format(self.filepath, self.name, input),
-                  "--config={}/{}/{}".format(self.filepath, self.name, config)])
+            call(
+                [
+                    self.cryptogen,
+                    "extend",
+                    f"--input={self.filepath}/{self.name}/{input}",
+                    f"--config={self.filepath}/{self.name}/{config}",
+                ]
+            )
         except Exception as e:
-            err_msg = "cryptogen extend fail for {}!".format(e)
+            err_msg = f"cryptogen extend fail for {e}!"
             raise Exception(err_msg)

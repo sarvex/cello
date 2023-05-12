@@ -106,15 +106,14 @@ class RegisterViewSet(viewsets.ViewSet):
         :rtype: bytes
         """
         try:
-            dir_org = "{}/{}/crypto-config/peerOrganizations/{}/" \
-                .format(CELLO_HOME, name, name)
+            dir_org = f"{CELLO_HOME}/{name}/crypto-config/peerOrganizations/{name}/"
 
-            zip_dir("{}msp".format(dir_org), "{}msp.zip".format(dir_org))
-            with open("{}msp.zip".format(dir_org), "rb") as f_msp:
+            zip_dir(f"{dir_org}msp", f"{dir_org}msp.zip")
+            with open(f"{dir_org}msp.zip", "rb") as f_msp:
                 msp = base64.b64encode(f_msp.read())
 
-            zip_dir("{}tlsca".format(dir_org), "{}tls.zip".format(dir_org))
-            with open("{}tls.zip".format(dir_org), "rb") as f_tls:
+            zip_dir(f"{dir_org}tlsca", f"{dir_org}tls.zip")
+            with open(f"{dir_org}tls.zip", "rb") as f_tls:
                 tls = base64.b64encode(f_tls.read())
         except Exception as e:
             raise e

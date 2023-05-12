@@ -20,7 +20,7 @@ def make_uuid():
 
 
 def random_name(prefix=""):
-    return "%s-%s" % (prefix, uuid.uuid4().hex)
+    return f"{prefix}-{uuid.uuid4().hex}"
 
 
 def with_common_response(responses=None):
@@ -88,10 +88,13 @@ def any_of(*perm_classes):
     """Returns permission class that allows access for
        one of permission classes provided in perm_classes"""
 
+
+
     class Or(BasePermission):
-        def has_permission(*args):
-            allowed = [p.has_permission(*args) for p in perm_classes]
+        def has_permission(self):
+            allowed = [p.has_permission(*self) for p in perm_classes]
             return reduce(lambda x, y: x or y, allowed)
+
 
     return Or
 

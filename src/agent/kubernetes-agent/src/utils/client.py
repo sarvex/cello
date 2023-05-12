@@ -46,7 +46,7 @@ class KubernetesClient(object):
         pod = None
         try:
             api_response = v1.list_namespaced_pod(
-                namespace, label_selector="app=%s" % deploy_name
+                namespace, label_selector=f"app={deploy_name}"
             )
         except ApiException as e:
             LOG.error(
@@ -115,16 +115,16 @@ class KubernetesClient(object):
                 "image": container.get("image"),
                 "image_pull_policy": "IfNotPresent",
             }
-            if environments is not None and len(environments) > 0:
-                container_parameter.update({"env": environments})
+            if environments is not None and environments:
+                container_parameter["env"] = environments
             if command is not None and len(command) > 0:
-                container_parameter.update({"command": command})
+                container_parameter["command"] = command
             if command_args is not None and len(command_args) > 0:
-                container_parameter.update({"args": command_args})
-            if ports is not None and len(ports) > 0:
-                container_parameter.update({"ports": ports})
+                container_parameter["args"] = command_args
+            if ports is not None and ports:
+                container_parameter["ports"] = ports
             if volume_mounts is not None and len(volume_mounts) > 0:
-                container_parameter.update({"volume_mounts": volume_mounts})
+                container_parameter["volume_mounts"] = volume_mounts
             container_pods.append(client.V1Container(**container_parameter))
 
         return container_pods
@@ -145,18 +145,15 @@ class KubernetesClient(object):
             parameters = {}
             if host_path:
                 host_path = client.V1HostPathVolumeSource(path=host_path)
-                parameters.update({"host_path": host_path})
+                parameters["host_path"] = host_path
             if empty_dir:
                 empty_dir = client.V1EmptyDirVolumeSource(**empty_dir)
-                parameters.update({"empty_dir": empty_dir})
-            persistent_volume_claim = volume.get("pvc", None)
-            if persistent_volume_claim:
+                parameters["empty_dir"] = empty_dir
+            if persistent_volume_claim := volume.get("pvc", None):
                 persistent_volume_claim = client.V1PersistentVolumeClaimVolumeSource(
                     claim_name=persistent_volume_claim
                 )
-                parameters.update(
-                    {"persistent_volume_claim": persistent_volume_claim}
-                )
+                parameters["persistent_volume_claim"] = persistent_volume_claim
             volumes.append(client.V1Volume(name=volume_name, **parameters))
         initial_container_pods = self._generate_container_pods(
             initial_containers

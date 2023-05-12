@@ -78,13 +78,13 @@ class AgentViewSet(viewsets.ViewSet):
                 #     if request.user.is_admin:
                 #         query_filters.update({"organization__name": org_name})
                 if name:
-                    query_filters.update({"name__icontains": name})
+                    query_filters["name__icontains"] = name
                 if agent_status:
-                    query_filters.update({"status": agent_status})
+                    query_filters["status"] = agent_status
                 if agent_type:
-                    query_filters.update({"type": agent_type})
+                    query_filters["type"] = agent_type
                 if organization:
-                    query_filters.update({"organization": organization})
+                    query_filters["organization"] = organization
 
                 agents = Agent.objects.filter(**query_filters)
                 p = Paginator(agents, per_page)
@@ -154,16 +154,16 @@ class AgentViewSet(viewsets.ViewSet):
                     if agent_count > 0:
                         raise ResourceExists("Agent Exists")
 
-                    body.update({"name": name})
+                    body["name"] = name
 
                 if config_file is not None:
-                    body.update({"config_file": config_file})
+                    body["config_file"] = config_file
 
                 org = request.user.organization
                 if org.agent.all():
                     raise ResourceExists("Agent Exists for the Organization")
                 else:
-                    body.update({"organization": org})
+                    body["organization"] = org
 
                 agent = Agent(**body)
                 agent.save()
@@ -392,9 +392,9 @@ class AgentViewSet(viewsets.ViewSet):
             try:
                 if request.user.is_operator:
                     agent = Agent.objects.get(id=pk)
+                elif request.user.organization is None:
+                    raise CustomError("Need join in organization")
                 else:
-                    if request.user.organization is None:
-                        raise CustomError("Need join in organization")
                     agent = Agent.objects.get(
                         id=pk, organization=request.user.organization
                     )

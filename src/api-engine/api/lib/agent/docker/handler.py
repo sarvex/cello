@@ -49,19 +49,21 @@ class DockerAgent(AgentBase):
                 'action': 'create'
             }
 
-            response = post('{}/api/v1/nodes'.format(self._urls), data=data)
+            response = post(f'{self._urls}/api/v1/nodes', data=data)
 
-            if response.status_code == 200:
-                txt = json.loads(response.text)
-                return txt['data']['id']
-            else:
+            if response.status_code != 200:
                 return None
+            txt = json.loads(response.text)
+            return txt['data']['id']
         except Exception as e:
             raise e
 
     def delete(self, *args, **kwargs):
         try:
-            response = post('{}/api/v1/nodes/{}'.format(self._urls, self._cname), data={'action': 'delete'})
+            response = post(
+                f'{self._urls}/api/v1/nodes/{self._cname}',
+                data={'action': 'delete'},
+            )
             if response.status_code == 200:
                 return True
             else:
@@ -71,7 +73,10 @@ class DockerAgent(AgentBase):
 
     def start(self, *args, **kwargs):
         try:
-            response = post('{}/api/v1/nodes/{}'.format(self._urls, self._cname), data={'action': 'start'})
+            response = post(
+                f'{self._urls}/api/v1/nodes/{self._cname}',
+                data={'action': 'start'},
+            )
             if response.status_code == 200:
                 return True
             else:
@@ -81,7 +86,10 @@ class DockerAgent(AgentBase):
 
     def restart(self, *args, **kwargs):
         try:
-            response = post('{}/api/v1/nodes/{}'.format(self._urls, self._cname), data={'action': 'restart'})
+            response = post(
+                f'{self._urls}/api/v1/nodes/{self._cname}',
+                data={'action': 'restart'},
+            )
             if response.status_code == 200:
                 return True
             else:
@@ -91,7 +99,9 @@ class DockerAgent(AgentBase):
 
     def stop(self, *args, **kwargs):
         try:
-            response = post('{}/api/v1/nodes/{}'.format(self._urls, self._cname), data={'action': 'stop'})
+            response = post(
+                f'{self._urls}/api/v1/nodes/{self._cname}', data={'action': 'stop'}
+            )
             if response.status_code == 200:
                 return True
             else:
@@ -101,7 +111,7 @@ class DockerAgent(AgentBase):
 
     def get(self, *args, **kwargs):
         try:
-            response = get('{}/api/v1/nodes/{}'.format(self._urls, self._cname))
+            response = get(f'{self._urls}/api/v1/nodes/{self._cname}')
             if response.status_code == 200:
                 return True
             else:
@@ -111,14 +121,14 @@ class DockerAgent(AgentBase):
 
     def update_config(self, config_file, node_type):
         try:
-            cmd = 'bash /tmp/update.sh "{} node start"'.format(node_type)
+            cmd = f'bash /tmp/update.sh "{node_type} node start"'
             data = {
                 'peer_config_file': config_file,
                 'orderer_config_file': config_file,
                 'action': 'update',
                 'cmd': cmd
             }
-            response = post('{}/api/v1/nodes/{}'.format(self._urls, self._cname), data=data)
+            response = post(f'{self._urls}/api/v1/nodes/{self._cname}', data=data)
             if response.status_code == 200:
                 return True
             else:

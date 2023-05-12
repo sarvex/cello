@@ -28,14 +28,14 @@ print('-'*20)
 print('Test starting a node')
 print()
 data = {'action': 'start'}
-response = post('http://localhost:5001/api/v1/nodes/'+nid, data=data)
+response = post(f'http://localhost:5001/api/v1/nodes/{nid}', data=data)
 print(response.text)
 print('-'*20)
 
 print('Test restarting a node')
 print()
 data = {'action': 'restart'}
-response = post('http://localhost:5001/api/v1/nodes/'+nid, data=data)
+response = post(f'http://localhost:5001/api/v1/nodes/{nid}', data=data)
 print(response.text)
 print('-'*20)
 
@@ -53,26 +53,26 @@ with open('msp.zip', 'rb') as node_msp, open('tls.zip', 'rb') as tls, open('bloc
                 'orderer_config_file':base64.b64encode(orderer_config.read()),
                 'cmd': 'bash /tmp/update.sh "peer node start"',
     }
-response = post('http://localhost:5001/api/v1/nodes/'+nid, data=data)
+response = post(f'http://localhost:5001/api/v1/nodes/{nid}', data=data)
 print(response.text)
 print('-'*20)
 
 print('Test stopping a node')
 print()
 data = {'action': 'stop'}
-response = post('http://localhost:5001/api/v1/nodes/'+nid, data=data)
+response = post(f'http://localhost:5001/api/v1/nodes/{nid}', data=data)
 print(response.text)
 print('-'*20)
 
 
 print('Get status of a node')
 print()
-response = get('http://localhost:5001/api/v1/nodes/'+nid)
+response = get(f'http://localhost:5001/api/v1/nodes/{nid}')
 print(response.text)
 print('-'*20)
 
 print('Test deleting a node')
 print()
 data = {'action': 'delete'}
-response = post('http://localhost:5001/api/v1/nodes/'+nid, data=data)
+response = post(f'http://localhost:5001/api/v1/nodes/{nid}', data=data)
 print(response.text)

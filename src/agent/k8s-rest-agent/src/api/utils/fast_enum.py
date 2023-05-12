@@ -47,11 +47,9 @@ class FastEnum(type):
 
     # pylint: disable=bad-mcs-classmethod-argument,protected-access,too-many-locals
     # pylint: disable=too-many-branches
-    def __new__(mcs, name, bases, namespace: Dict[Text, Any]):
+    def __new__(cls, name, bases, namespace: Dict[Text, Any]):
         attributes: List[Text] = [
-            k
-            for k in namespace.keys()
-            if (not k.startswith("_") and k.isupper())
+            k for k in namespace if (not k.startswith("_") and k.isupper())
         ]
         attributes += [
             k
@@ -60,9 +58,7 @@ class FastEnum(type):
         ]
         light_val = 0 + int(not bool(namespace.get("_ZERO_VALUED")))
         for attr in attributes:
-            if attr in namespace:
-                continue
-            else:
+            if attr not in namespace:
                 namespace[attr] = light_val
                 light_val += 1
 
@@ -83,7 +79,7 @@ class FastEnum(type):
         namespace["__new__"] = FastEnum.__new
 
         if "__init__" not in namespace:
-            namespace["__init__"] = _resolve_init(bases) or mcs.__init
+            namespace["__init__"] = _resolve_init(bases) or cls.__init
         if "__annotations__" not in namespace:
             __annotations__ = dict(name=Text, value=Any)
             for k in attributes:
@@ -92,7 +88,7 @@ class FastEnum(type):
         namespace["__dir__"] = partial(
             FastEnum.__dir, bases=bases, namespace=namespace
         )
-        typ = type.__new__(mcs, name, bases, namespace)
+        typ = type.__new__(cls, name, bases, namespace)
         if attributes:
             typ._value_to_instance_map = {}
             for instance_name in attributes:
@@ -109,15 +105,15 @@ class FastEnum(type):
             # noinspection PyUnresolvedReferences
             typ.__call__ = typ.__new__ = typ.get
             del typ.__init__
-            typ.__hash__ = mcs.__hash
-            typ.__eq__ = mcs.__eq
-            typ.__copy__ = mcs.__copy
-            typ.__deepcopy__ = mcs.__deepcopy
-            typ.__reduce__ = mcs.__reduce
+            typ.__hash__ = cls.__hash
+            typ.__eq__ = cls.__eq
+            typ.__copy__ = cls.__copy
+            typ.__deepcopy__ = cls.__deepcopy
+            typ.__reduce__ = cls.__reduce
             if "__str__" not in namespace:
-                typ.__str__ = mcs.__str
+                typ.__str__ = cls.__str
             if "__repr__" not in namespace:
-                typ.__repr__ = mcs.__repr
+                typ.__repr__ = cls.__repr
 
             if f"_{name}__init_late" in namespace:
                 fun = namespace[f"_{name}__init_late"]
@@ -125,14 +121,13 @@ class FastEnum(type):
                     fun(instance)
                 delattr(typ, f"_{name}__init_late")
 
-            typ.__setattr__ = typ.__delattr__ = mcs.__restrict_modification
+            typ.__setattr__ = typ.__delattr__ = cls.__restrict_modification
             typ._finalized = True
         return typ
 
     @staticmethod
     def __new(cls, *values, **_):
-        __new__ = _resolve_new(cls.__bases__)
-        if __new__:
+        if __new__ := _resolve_new(cls.__bases__):
             __new__, typ = __new__
             obj = __new__(cls, *values)
             obj._base_typed = typ
@@ -142,8 +137,7 @@ class FastEnum(type):
 
     @staticmethod
     def __init(instance, value: Any, name: Text):
-        base_val_type = getattr(instance, "_base_typed", None)
-        if base_val_type:
+        if base_val_type := getattr(instance, "_base_typed", None):
             value = base_val_type(value)
         instance.value = value
         instance.name = name
@@ -177,19 +171,18 @@ class FastEnum(type):
             val is other if type(other) is type(val) else val.value == other
         )
 
-    def __hash(cls):
+    def __hash(self):
         # noinspection PyUnresolvedReferences
-        return hash(cls.value)
+        return hash(self.value)
 
     @staticmethod
     def __restrict_modification(*a, **k):
         raise TypeError(
-            f"Enum-like classes strictly prohibit changing any attribute/property"
-            f" after they are once set"
+            'Enum-like classes strictly prohibit changing any attribute/property after they are once set'
         )
 
-    def __iter__(cls):
-        return iter(cls._value_to_instance_map.values())
+    def __iter__(self):
+        return iter(self._value_to_instance_map.values())
 
     def __setattr__(cls, key, value):
         if hasattr(cls, "_finalized"):
@@ -201,41 +194,41 @@ class FastEnum(type):
             cls.__restrict_modification()
         super().__delattr__(item)
 
-    def __getitem__(cls, item):
-        return getattr(cls, item)
+    def __getitem__(self, item):
+        return getattr(self, item)
 
-    def has_value(cls, value):
-        return value in cls._value_to_instance_map
+    def has_value(self, value):
+        return value in self._value_to_instance_map
 
-    def to_choices(cls):
+    def to_choices(self):
         return [(key, key) for key in cls._value_to_instance_map.keys()]
 
-    def values(cls):
-        return cls._value_to_instance_map.keys()
+    def values(self):
+        return self._value_to_instance_map.keys()
 
-    def key_description_list(cls):
+    def key_description_list(self):
         result = []
-        for key in cls._value_to_instance_map.keys():
+        for key in self._value_to_instance_map.keys():
             enum_key = "_".join(
                 re.sub(
                     "([A-Z][a-z]+)", r" \1", re.sub("([A-Z]+)", r" \1", key)
                 ).split()
             ).upper()
-            result.append((key, cls[enum_key].description))
+            result.append((key, self[enum_key].description))
         return result
 
     # pylint: disable=unused-argument
     # noinspection PyUnusedLocal,SpellCheckingInspection
-    def __deepcopy(cls, memodict=None):
-        return cls
+    def __deepcopy(self, memodict=None):
+        return self
 
-    def __copy(cls):
-        return cls
+    def __copy(self):
+        return self
 
-    def __reduce(cls):
-        typ = type(cls)
+    def __reduce(self):
+        typ = type(self)
         # noinspection PyUnresolvedReferences
-        return typ.get, (typ, cls.value)
+        return typ.get, (typ, self.value)
 
     @staticmethod
     def __str(clz):

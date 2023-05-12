@@ -16,6 +16,7 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+
 import os
 
 from django.conf import settings
@@ -44,7 +45,6 @@ from api.routes.general.views import (
 )
 
 
-DEBUG = getattr(settings, "DEBUG")
 API_VERSION = os.getenv("API_VERSION")
 WEBROOT = os.getenv("WEBROOT")
 # WEBROOT = "/".join(WEBROOT.split("/")[1:]) + "/"
@@ -86,7 +86,7 @@ urlpatterns += [
     path("redoc/", SchemaView.with_ui("redoc", cache_timeout=0), name="redoc"),
 ]
 
-if DEBUG:
+if DEBUG := getattr(settings, "DEBUG"):
     urlpatterns = [path(WEBROOT, include(urlpatterns))]
     urlpatterns += static(
         settings.MEDIA_URL, document_root=settings.MEDIA_ROOT

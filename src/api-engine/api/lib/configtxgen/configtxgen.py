@@ -18,7 +18,7 @@ class ConfigTxGen:
                 return:
         """
         self.network = network
-        self.configtxgen = configtxgen + "/configtxgen"
+        self.configtxgen = f"{configtxgen}/configtxgen"
         self.filepath = filepath
         self.version = version
 
@@ -31,10 +31,19 @@ class ConfigTxGen:
                 return:
         """
         try:
-            call([self.configtxgen, "-configPath", "{}/{}/".format(self.filepath, self.network),
-                  "-profile", "{}".format(profile),
-                  "-outputBlock", "{}/{}/{}".format(self.filepath, self.network, outputblock),
-                  "-channelID", "{}".format(channelid)])
+            call(
+                [
+                    self.configtxgen,
+                    "-configPath",
+                    f"{self.filepath}/{self.network}/",
+                    "-profile",
+                    f"{profile}",
+                    "-outputBlock",
+                    f"{self.filepath}/{self.network}/{outputblock}",
+                    "-channelID",
+                    f"{channelid}",
+                ]
+            )
         except Exception as e:
             err_msg = "configtxgen genesis fail! "
             raise Exception(err_msg + str(e))
@@ -48,10 +57,19 @@ class ConfigTxGen:
                 return:
         """
         try:
-            call([self.configtxgen, "-configPath", "{}/{}/".format(self.filepath, self.network),
-                  "-profile", "{}".format(profile),
-                  "-outputCreateChannelTx", "{}/{}/{}".format(self.filepath, self.network, "channel-artifacts/" + outputCreateChannelTx),
-                  "-channelID", "{}".format(channelid)])
+            call(
+                [
+                    self.configtxgen,
+                    "-configPath",
+                    f"{self.filepath}/{self.network}/",
+                    "-profile",
+                    f"{profile}",
+                    "-outputCreateChannelTx",
+                    f"{self.filepath}/{self.network}/channel-artifacts/{outputCreateChannelTx}",
+                    "-channelID",
+                    f"{channelid}",
+                ]
+            )
         except Exception as e:
             err_msg = "configtxgen genesis fail! "
             raise Exception(err_msg + str(e))

@@ -18,9 +18,7 @@ class HelloViewSet(PermissionsPerMethodMixin, viewsets.ViewSet):
         operation_summary="Hello world", operation_description="Hello world"
     )
     def list(self, request):
-        return Response(
-            {"hello": "world %s" % APP_VERSION}, status=status.HTTP_200_OK
-        )
+        return Response({"hello": f"world {APP_VERSION}"}, status=status.HTTP_200_OK)
 
     @swagger_auto_schema(operation_summary="hello world need auth")
     @action(
@@ -29,9 +27,8 @@ class HelloViewSet(PermissionsPerMethodMixin, viewsets.ViewSet):
         url_name="need-auth",
         detail=False,
     )
-    # @permission_classes((IsAuthenticated,))
     def need_auth(self, request):
         LOG.info("request user %s", request.user)
         return Response(
-            {"hello": "auth world %s" % APP_VERSION}, status=status.HTTP_200_OK
+            {"hello": f"auth world {APP_VERSION}"}, status=status.HTTP_200_OK
         )

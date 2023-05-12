@@ -62,22 +62,34 @@ class ConfigTX:
 
         for orderer in orderers:
             OrdererMSP = orderer["name"].capitalize() + "Orderer"
-            OrdererOrg = dict(Name=orderer["name"].split(".")[0].capitalize() + "Orderer",
-                              ID='{}MSP'.format(OrdererMSP),
-                              MSPDir='{}/{}/crypto-config/ordererOrganizations/{}/msp'.format(self.filepath, orderer["name"], orderer['name'].split(".", 1)[1]),
-                              Policies=dict(Readers=dict(Type="Signature", Rule="OR('{}MSP.member')".format(OrdererMSP)),
-                              Writers=dict(Type="Signature", Rule="OR('{}MSP.member')".format(OrdererMSP)),
-                              Admins=dict(Type="Signature", Rule="OR('{}MSP.admin')".format(OrdererMSP)))
-                              )
+            OrdererOrg = dict(
+                Name=orderer["name"].split(".")[0].capitalize() + "Orderer",
+                ID=f'{OrdererMSP}MSP',
+                MSPDir=f"""{self.filepath}/{orderer["name"]}/crypto-config/ordererOrganizations/{orderer['name'].split(".", 1)[1]}/msp""",
+                Policies=dict(
+                    Readers=dict(
+                        Type="Signature", Rule=f"OR('{OrdererMSP}MSP.member')"
+                    ),
+                    Writers=dict(
+                        Type="Signature", Rule=f"OR('{OrdererMSP}MSP.member')"
+                    ),
+                    Admins=dict(
+                        Type="Signature", Rule=f"OR('{OrdererMSP}MSP.admin')"
+                    ),
+                ),
+            )
             for host in orderer['hosts']:
-                OrdererAddress.append('{}.{}:{}'.format(host['name'], orderer['name'].split(".", 1)[1], 7050))
-                Consenters.append(dict(
-                    Host='{}.{}'.format(host['name'], orderer['name'].split(".", 1)[1]),
-                    Port=7050,
-                    ClientTLSCert='{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}.{}/tls/server.crt'
-                                  .format(self.filepath, orderer['name'], orderer['name'].split(".", 1)[1], host['name'], orderer['name'].split(".", 1)[1]),
-                    ServerTLSCert='{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}.{}/tls/server.crt'
-                                  .format(self.filepath, orderer['name'], orderer['name'].split(".", 1)[1], host['name'], orderer['name'].split(".", 1)[1])))
+                OrdererAddress.append(
+                    f"""{host['name']}.{orderer['name'].split(".", 1)[1]}:7050"""
+                )
+                Consenters.append(
+                    dict(
+                        Host=f"""{host['name']}.{orderer['name'].split(".", 1)[1]}""",
+                        Port=7050,
+                        ClientTLSCert=f"""{self.filepath}/{orderer['name']}/crypto-config/ordererOrganizations/{orderer['name'].split(".", 1)[1]}/orderers/{host['name']}.{orderer['name'].split(".", 1)[1]}/tls/server.crt""",
+                        ServerTLSCert=f"""{self.filepath}/{orderer['name']}/crypto-config/ordererOrganizations/{orderer['name'].split(".", 1)[1]}/orderers/{host['name']}.{orderer['name'].split(".", 1)[1]}/tls/server.crt""",
+                    )
+                )
             OrdererOrg["OrdererEndpoints"] = deepcopy(OrdererAddress)
             OrdererOrganizations.append(OrdererOrg)
 
@@ -85,15 +97,27 @@ class ConfigTX:
 
         for peer in peers:
             PeerMSP = peer["name"].capitalize()
-            PeerOrganizations.append(dict(Name=peer["name"].split(".")[0].capitalize(),
-                                          ID='{}MSP'.format(PeerMSP),
-                                          MSPDir='{}/{}/crypto-config/peerOrganizations/{}/msp'.format(self.filepath, peer['name'], peer['name']),
-                                          # AnchorPeers=[{'Port': peer["hosts"][0]["port"], 'Host': '{}.{}'.format(peer["hosts"][0]["name"],peer["name"])}],
-                                          Policies=dict(Readers=dict(Type="Signature", Rule="OR('{}MSP.member')".format(PeerMSP)),
-                                                        Writers=dict(Type="Signature", Rule="OR('{}MSP.member')".format(PeerMSP)),
-                                                        Admins=dict(Type="Signature", Rule="OR('{}MSP.admin')".format(PeerMSP)),
-                                                        Endorsement=dict(Type="Signature", Rule="OR('{}MSP.member')".format(PeerMSP)))
-                                          ))
+            PeerOrganizations.append(
+                dict(
+                    Name=peer["name"].split(".")[0].capitalize(),
+                    ID=f'{PeerMSP}MSP',
+                    MSPDir=f"{self.filepath}/{peer['name']}/crypto-config/peerOrganizations/{peer['name']}/msp",
+                    Policies=dict(
+                        Readers=dict(
+                            Type="Signature", Rule=f"OR('{PeerMSP}MSP.member')"
+                        ),
+                        Writers=dict(
+                            Type="Signature", Rule=f"OR('{PeerMSP}MSP.member')"
+                        ),
+                        Admins=dict(
+                            Type="Signature", Rule=f"OR('{PeerMSP}MSP.admin')"
+                        ),
+                        Endorsement=dict(
+                            Type="Signature", Rule=f"OR('{PeerMSP}MSP.member')"
+                        ),
+                    ),
+                )
+            )
         Organizations = OrdererOrganizations + PeerOrganizations
         Capabilities = dict(
             Channel=ChannelCapabilities,
@@ -113,8 +137,7 @@ class ConfigTX:
         Orderer["EtcdRaft"]["Consenters"] = deepcopy(Consenters)
         Channel = deepcopy(ChannelDefaults)
         Channel["Capabilities"] = Capabilities["Channel"]
-        Profiles = {}
-        Profiles["TwoOrgsOrdererGenesis"] = deepcopy(Channel)
+        Profiles = {"TwoOrgsOrdererGenesis": deepcopy(Channel)}
         Profiles["TwoOrgsOrdererGenesis"]["Orderer"] = deepcopy(Orderer)
         Profiles["TwoOrgsOrdererGenesis"]["Orderer"]["Organizations"] = OrdererOrganizations
         Profiles["TwoOrgsOrdererGenesis"]["Orderer"]["Capabilities"] = Capabilities["Orderer"]
@@ -128,9 +151,9 @@ class ConfigTX:
             Channel=Channel,
             Profiles=Profiles
         )
-        os.system('mkdir -p {}/{}'.format(self.filepath, self.network))
+        os.system(f'mkdir -p {self.filepath}/{self.network}')
 
-        with open('{}/{}/configtx.yaml'.format(self.filepath, self.network), 'w', encoding='utf-8') as f:
+        with open(f'{self.filepath}/{self.network}/configtx.yaml', 'w', encoding='utf-8') as f:
             yaml.dump(configtx, f, sort_keys=False)
 
     def createChannel(self, name, organizations):
@@ -141,7 +164,7 @@ class ConfigTX:
                 return:
         """
         try:
-            with open('{}/{}/{}'.format(self.filepath, self.network, "configtx.yaml"), 'r+', encoding='utf-8') as f:
+            with open(f'{self.filepath}/{self.network}/configtx.yaml', 'r+', encoding='utf-8') as f:
                 configtx = yaml.load(f, Loader=yaml.FullLoader)
                 Profiles = configtx["Profiles"]
                 Channel = configtx["Channel"]
@@ -149,10 +172,12 @@ class ConfigTX:
                 Capabilities = configtx["Capabilities"]["Application"]
                 PeerOrganizations = []
                 for org in configtx["Organizations"]:
-                    for item in organizations:
-                        if org["ID"] == item.capitalize() + "MSP":
-                            PeerOrganizations.append(org)
-                if PeerOrganizations == []:
+                    PeerOrganizations.extend(
+                        org
+                        for item in organizations
+                        if org["ID"] == f"{item.capitalize()}MSP"
+                    )
+                if not PeerOrganizations:
                     raise Exception("can't find organnization")
                 Profiles[name] = deepcopy(Channel)
                 Profiles[name]["Consortium"] = "SampleConsortium"
@@ -160,11 +185,11 @@ class ConfigTX:
                 Profiles[name]["Application"]["Organizations"] = deepcopy(PeerOrganizations)
                 Profiles[name]["Application"]["Capabilities"] = deepcopy(Capabilities)
 
-            with open('{}/{}/{}'.format(self.filepath, self.network, "configtx.yaml"), 'w', encoding='utf-8') as f:
+            with open(f'{self.filepath}/{self.network}/configtx.yaml', 'w', encoding='utf-8') as f:
                 yaml.safe_dump(configtx, f, sort_keys=False)
 
         except Exception as e:
-            err_msg = "Configtx create channel failed for {}!".format(e)
+            err_msg = f"Configtx create channel failed for {e}!"
             raise Exception(err_msg)
 
 

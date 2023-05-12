@@ -58,11 +58,11 @@ class FileViewSet(viewsets.ViewSet):
                 raise PermissionDenied
             query_filter = {}
             if name:
-                query_filter.update({"name__icontains": name})
+                query_filter["name__icontains"] = name
             if file_type:
-                query_filter.update({"type": file_type})
+                query_filter["type"] = file_type
             if organization:
-                query_filter.update({"organization": organization})
+                query_filter["organization"] = organization
 
             files = File.objects.filter(**query_filter)
             p = Paginator(files, per_page)

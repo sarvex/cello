@@ -38,10 +38,7 @@ CA_ADMIN_PASSWORD = CA_CONFIG.get("admin_password", "adminpw")
 
 FABRIC_IMAGE_BASE_NAME = "hyperledger/fabric"
 
-headers = {
-    "Authorization": "JWT %s" % TOKEN,
-    "Content-Type": "application/json",
-}
+headers = {"Authorization": f"JWT {TOKEN}", "Content-Type": "application/json"}
 
 
 @unique
@@ -76,8 +73,10 @@ class FabricNodeType(Enum):
     Peer = "peer"
 
 
+
+
 @unique
 class FabricImages(Enum):
-    Ca = "%s-ca" % FABRIC_IMAGE_BASE_NAME
-    Peer = "%s-peer" % FABRIC_IMAGE_BASE_NAME
-    Orderer = "%s-orderer" % FABRIC_IMAGE_BASE_NAME
+    Ca = f"{FABRIC_IMAGE_BASE_NAME}-ca"
+    Peer = f"{FABRIC_IMAGE_BASE_NAME}-peer"
+    Orderer = f"{FABRIC_IMAGE_BASE_NAME}-orderer"

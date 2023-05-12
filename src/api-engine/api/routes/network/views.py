@@ -44,12 +44,11 @@ class NetworkViewSet(viewsets.ViewSet):
         :rtype: bytearray
         """
         try:
-            dir_node = "{}/{}/".format(CELLO_HOME, network)
+            dir_node = f"{CELLO_HOME}/{network}/"
             name = "genesis.block"
             zname = "block.zip"
-            zip_file("{}{}".format(dir_node, name),
-                     "{}{}".format(dir_node, zname))
-            with open("{}{}".format(dir_node, zname), "rb") as f_block:
+            zip_file(f"{dir_node}{name}", f"{dir_node}{zname}")
+            with open(f"{dir_node}{zname}", "rb") as f_block:
                 block = base64.b64encode(f_block.read())
             return block
         except Exception as e:
@@ -121,23 +120,21 @@ class NetworkViewSet(viewsets.ViewSet):
             if ports is None:
                 raise ResourceNotFound(detail="Port Not Found")
 
-            info = {}
-
             org_name = org.name if node.type == "peer" else org.name.split(".", 1)[
                 1]
-            # get info of node, e.g, tls, msp, config.
-            info["status"] = node.status
-            info["msp"] = node.msp
-            info["tls"] = node.tls
-            info["config_file"] = node.config_file
-            info["type"] = node.type
-            info["name"] = "{}.{}".format(node.name, org_name)
-            info["bootstrap_block"] = network.genesisblock
-            info["urls"] = agent.urls
-            info["network_type"] = network.type
-            info["agent_type"] = agent.type
-            info["ports"] = ports
-            return info
+            return {
+                "status": node.status,
+                "msp": node.msp,
+                "tls": node.tls,
+                "config_file": node.config_file,
+                "type": node.type,
+                "name": f"{node.name}.{org_name}",
+                "bootstrap_block": network.genesisblock,
+                "urls": agent.urls,
+                "network_type": network.type,
+                "agent_type": agent.type,
+                "ports": ports,
+            }
         except Exception as e:
             raise e
 
@@ -151,8 +148,7 @@ class NetworkViewSet(viewsets.ViewSet):
             node_qs = Node.objects.filter(id=pk)
             infos = self._agent_params(pk)
             agent = AgentHandler(infos)
-            cid = agent.create(infos)
-            if cid:
+            if cid := agent.create(infos):
                 node_qs.update(cid=cid, status="running")
             else:
                 raise ResourceNotFound(detail="Container Not Built")
@@ -189,17 +185,15 @@ class NetworkViewSet(viewsets.ViewSet):
                     raise ResourceExists(
                         detail="Network exists for the organization")
 
-                orderers = []
-                peers = []
-                orderers.append({"name": org.name, "hosts": []})
-                peers.append({"name": org.name, "hosts": []})
+                orderers = [{"name": org.name, "hosts": []}]
+                peers = [{"name": org.name, "hosts": []}]
                 nodes = Node.objects.filter(organization=org)
                 for node in nodes:
-                    if node.type == "peer":
-                        peers[0]["hosts"].append({"name": node.name})
-                    elif node.type == "orderer":
+                    if node.type == "orderer":
                         orderers[0]["hosts"].append({"name": node.name})
 
+                    elif node.type == "peer":
+                        peers[0]["hosts"].append({"name": node.name})
                 ConfigTX(name).create(consensus=consensus,
                                       orderers=orderers, peers=peers)
                 ConfigTxGen(name).genesis()
@@ -253,7 +247,7 @@ class NetworkViewSet(viewsets.ViewSet):
         """
         try:
             network = Network.objects.get(pk=pk)
-            path = "{}/{}".format(CELLO_HOME, network.name)
+            path = f"{CELLO_HOME}/{network.name}"
             if os.path.exists(path):
                 shutil.rmtree(path, True)
             network.delete()

@@ -139,21 +139,21 @@ class ChannelViewSet(viewsets.ViewSet):
 
                 ConfigTX(org.network.name).createChannel(name, [org.name])
                 ConfigTxGen(org.network.name).channeltx(
-                    profile=name, channelid=name, outputCreateChannelTx="{}.tx".format(name))
-                tx_path = "{}/{}/channel-artifacts/{}.tx".format(
-                    CELLO_HOME, org.network.name, name)
-                block_path = "{}/{}/channel-artifacts/{}.block".format(
-                    CELLO_HOME, org.network.name, name)
+                    profile=name,
+                    channelid=name,
+                    outputCreateChannelTx=f"{name}.tx",
+                )
+                tx_path = f"{CELLO_HOME}/{org.network.name}/channel-artifacts/{name}.tx"
+                block_path = f"{CELLO_HOME}/{org.network.name}/channel-artifacts/{name}.block"
                 ordering_node = Node.objects.get(id=orderers[0])
                 peer_node = Node.objects.get(id=peers[0])
                 envs = init_env_vars(peer_node, org)
                 peer_channel_cli = PeerChannel("v2.2.0", **envs)
                 peer_channel_cli.create(
                     channel=name,
-                    orderer_url="{}.{}:{}".format(
-                        ordering_node.name, org.name.split(".", 1)[1], str(7050)),
+                    orderer_url=f'{ordering_node.name}.{org.name.split(".", 1)[1]}:7050',
                     channel_tx=tx_path,
-                    output_block=block_path
+                    output_block=block_path,
                 )
                 for i in range(len(peers)):
                     peer_node = Node.objects.get(id=peers[i])
@@ -307,10 +307,9 @@ class ChannelViewSet(viewsets.ViewSet):
                 )
 
                 for node in nodes:
-                    dir_node = "{}/{}/crypto-config/peerOrganizations".format(
-                        CELLO_HOME, org.name)
+                    dir_node = f"{CELLO_HOME}/{org.name}/crypto-config/peerOrganizations"
                     env = {
-                        "FABRIC_CFG_PATH": "{}/{}/peers/{}/".format(dir_node, org.name, node.name + "." + org.name),
+                        "FABRIC_CFG_PATH": f"{dir_node}/{org.name}/peers/{node.name}.{org.name}/"
                     }
                     cli = PeerChannel("v2.2.0", **env)
                     cli.signconfigtx(
@@ -338,10 +337,9 @@ class ChannelViewSet(viewsets.ViewSet):
                 type=FabricNodeType.Peer.name.lower(),
                 status=NodeStatus.Running.name.lower()
             ).first()
-            dir_node = "{}/{}/crypto-config/peerOrganizations".format(
-                CELLO_HOME, org.name)
+            dir_node = f"{CELLO_HOME}/{org.name}/crypto-config/peerOrganizations"
             env = {
-                "FABRIC_CFG_PATH": "{}/{}/peers/{}/".format(dir_node, org.name, node.name + "." + org.name),
+                "FABRIC_CFG_PATH": f"{dir_node}/{org.name}/peers/{node.name}.{org.name}/"
             }
             peer_channel_cli = PeerChannel("v2.2.0", **env)
             peer_channel_cli.fetch(option="config", channel=channel.name)
@@ -354,8 +352,7 @@ class ChannelViewSet(viewsets.ViewSet):
             data = {
                 "config": config,
                 "organization": org.name,
-                # TODO: create a method on Organization or Node to return msp_id
-                "msp_id": '{}'.format(org.name.split(".")[0].capitalize())
+                "msp_id": f'{org.name.split(".")[0].capitalize()}',
             }
 
             # Save as a json file for future usage
@@ -381,23 +378,18 @@ def init_env_vars(node, org):
     """
     org_name = org.name
     org_domain = org_name.split(".", 1)[1]
-    dir_certificate = "{}/{}/crypto-config/ordererOrganizations/{}".format(
-        CELLO_HOME, org_name, org_domain)
-    dir_node = "{}/{}/crypto-config/peerOrganizations".format(
-        CELLO_HOME, org_name)
+    dir_certificate = f"{CELLO_HOME}/{org_name}/crypto-config/ordererOrganizations/{org_domain}"
+    dir_node = f"{CELLO_HOME}/{org_name}/crypto-config/peerOrganizations"
 
-    envs = {
+    return {
         "CORE_PEER_TLS_ENABLED": "true",
-        # "Org1.cello.comMSP"
-        "CORE_PEER_LOCALMSPID": "{}MSP".format(org_name.capitalize()),
-        "CORE_PEER_TLS_ROOTCERT_FILE": "{}/{}/peers/{}/tls/ca.crt".format(dir_node, org_name, node.name + "." + org_name),
-        "CORE_PEER_ADDRESS": "{}:{}".format(
-            node.name + "." + org_name, str(7051)),
-        "CORE_PEER_MSPCONFIGPATH": "{}/{}/users/Admin@{}/msp".format(dir_node, org_name, org_name),
-        "FABRIC_CFG_PATH": "{}/{}/peers/{}/".format(dir_node, org_name, node.name + "." + org_name),
-        "ORDERER_CA": "{}/msp/tlscacerts/tlsca.{}-cert.pem".format(dir_certificate, org_domain)
+        "CORE_PEER_LOCALMSPID": f"{org_name.capitalize()}MSP",
+        "CORE_PEER_TLS_ROOTCERT_FILE": f"{dir_node}/{org_name}/peers/{node.name}.{org_name}/tls/ca.crt",
+        "CORE_PEER_ADDRESS": f"{node.name}.{org_name}:7051",
+        "CORE_PEER_MSPCONFIGPATH": f"{dir_node}/{org_name}/users/Admin@{org_name}/msp",
+        "FABRIC_CFG_PATH": f"{dir_node}/{org_name}/peers/{node.name}.{org_name}/",
+        "ORDERER_CA": f"{dir_certificate}/msp/tlscacerts/tlsca.{org_domain}-cert.pem",
     }
-    return envs
 
 
 def join_peers(envs, block_path):

@@ -66,12 +66,12 @@ class CryptoConfig:
                                     Template=template))
                     network['OrdererOrgs'] = org
 
-            os.system('mkdir -p {}/{}'.format(self.filepath, self.name))
+            os.system(f'mkdir -p {self.filepath}/{self.name}')
 
-            with open('{}/{}/{}'.format(self.filepath, self.name, self.file), 'w', encoding='utf-8') as f:
+            with open(f'{self.filepath}/{self.name}/{self.file}', 'w', encoding='utf-8') as f:
                 yaml.dump(network, f)
         except Exception as e:
-            err_msg = "CryptoConfig create failed for {}!".format(e)
+            err_msg = f"CryptoConfig create failed for {e}!"
             raise Exception(err_msg)
 
     def update(self, org_info: any) -> None:
@@ -81,7 +81,7 @@ class CryptoConfig:
                 return:
         """
         try:
-            with open('{}/{}/{}'.format(self.filepath, self.name, self.file), 'r+', encoding='utf-8') as f:
+            with open(f'{self.filepath}/{self.name}/{self.file}', 'r+', encoding='utf-8') as f:
                 network = yaml.load(f, Loader=yaml.FullLoader)
                 if org_info["type"] == "peer":
                     orgs = network['PeerOrgs']
@@ -93,10 +93,10 @@ class CryptoConfig:
                     for host in org_info["Specs"]:
                         specs.append(dict(Hostname=host))
 
-            with open('{}/{}/{}'.format(self.filepath, self.name, self.file), 'w', encoding='utf-8') as f:
+            with open(f'{self.filepath}/{self.name}/{self.file}', 'w', encoding='utf-8') as f:
                 yaml.dump(network, f)
         except Exception as e:
-            err_msg = "CryptoConfig update failed for {}!".format(e)
+            err_msg = f"CryptoConfig update failed for {e}!"
             raise Exception(err_msg)
 
     def delete(self):
@@ -105,7 +105,7 @@ class CryptoConfig:
                 return:
         """
         try:
-            os.system('rm -rf {}/{}'.format(self.filepath, self.name))
+            os.system(f'rm -rf {self.filepath}/{self.name}')
         except Exception as e:
-            err_msg = "CryptoConfig delete failed for {}!".format(e)
+            err_msg = f"CryptoConfig delete failed for {e}!"
             raise Exception(err_msg)

@@ -7,7 +7,7 @@ ROLE_PREFIX = getattr(settings, "ROLE_PREFIX", "tea_cloud")
 
 
 class EnumWithDisplayMeta(EnumMeta):
-    def __new__(mcs, name, bases, attrs):
+    def __new__(cls, name, bases, attrs):
         display_strings = attrs.get("DisplayStrings")
 
         if display_strings is not None and inspect.isclass(display_strings):
@@ -15,7 +15,7 @@ class EnumWithDisplayMeta(EnumMeta):
             if hasattr(attrs, "_member_names"):
                 attrs._member_names.remove("DisplayStrings")
 
-        obj = super().__new__(mcs, name, bases, attrs)
+        obj = super().__new__(cls, name, bases, attrs)
         for m in obj:
             m.display_string = getattr(display_strings, m.name, None)
 
@@ -47,18 +47,14 @@ class ExtraEnum(Enum):
 
     @classmethod
     def to_choices(cls, string_as_value=False):
-        if string_as_value:
-            choices = [
+        return (
+            [
                 (name.lower().replace("_", "."), name)
                 for name, member in cls.__members__.items()
             ]
-        else:
-            choices = [
-                (member.value, name)
-                for name, member in cls.__members__.items()
-            ]
-
-        return choices
+            if string_as_value
+            else [(member.value, name) for name, member in cls.__members__.items()]
+        )
 
     @classmethod
     def values(cls):

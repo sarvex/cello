@@ -83,9 +83,8 @@ class K8SParameterSerializer(serializers.ModelSerializer):
             key = attrs.get("key")
             if not cert or not key:
                 raise serializers.ValidationError("Need cert and key content")
-            else:
-                attrs["username"] = ""
-                attrs["password"] = ""
+            attrs["username"] = ""
+            attrs["password"] = ""
         elif credential_type == separate_upper_class(
             K8SCredentialType.UsernamePassword.name
         ):
@@ -93,15 +92,8 @@ class K8SParameterSerializer(serializers.ModelSerializer):
             password = attrs.get("password")
             if not username or not password:
                 raise serializers.ValidationError("Need username and password")
-            else:
-                attrs["cert"] = ""
-                attrs["key"] = ""
-        elif credential_type == separate_upper_class(
-            K8SCredentialType.Config.name
-        ):
-            # TODO: Add config type validation
-            pass
-
+            attrs["cert"] = ""
+            attrs["key"] = ""
         return attrs
 
 
@@ -109,9 +101,7 @@ class AgentCreateBody(serializers.ModelSerializer):
     # organization = serializers.UUIDField(help_text=IDHelpText)
 
     def to_form_paras(self):
-        custom_paras = to_form_paras(self)
-
-        return custom_paras
+        return to_form_paras(self)
 
     class Meta:
         model = Agent
@@ -139,7 +129,6 @@ class AgentCreateBody(serializers.ModelSerializer):
         }
 
     def validate(self, attrs):
-        pass
         return attrs
 
 

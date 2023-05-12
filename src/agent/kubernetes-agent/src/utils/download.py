@@ -11,7 +11,7 @@ def download_file(url, target_dir):
     r = requests.get(url, allow_redirects=True)
     content_type = r.headers["content-type"]
     extension = mimetypes.guess_extension(content_type)
-    file_name = "%s%s" % (uuid4().hex, extension)
+    file_name = f"{uuid4().hex}{extension}"
     target_file = os.path.join(target_dir, file_name)
 
     if not os.path.exists(target_dir):

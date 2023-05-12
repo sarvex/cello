@@ -50,9 +50,7 @@ class FileListSerializer(ListResponseSerializer):
 
 class FileCreateSerializer(serializers.ModelSerializer):
     def to_form_paras(self):
-        custom_paras = to_form_paras(self)
-
-        return custom_paras
+        return to_form_paras(self)
 
     class Meta:
         model = File

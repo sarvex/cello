@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
+
 import os
 from django.utils.translation import gettext_lazy as _
 
@@ -126,10 +127,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.0/howto/static-files/
 
-STATIC_URL = WEBROOT + "/static/"
+STATIC_URL = f"{WEBROOT}/static/"
 STATIC_ROOT = "/var/www/static"
 MEDIA_ROOT = "/data/media"
-MEDIA_URL = WEBROOT + "/media/"
+MEDIA_URL = f"{WEBROOT}/media/"
 
 USE_X_FORWARDED_HOST = True
 FORCE_SCRIPT_NAME = WEBROOT if WEBROOT != "" else "/"

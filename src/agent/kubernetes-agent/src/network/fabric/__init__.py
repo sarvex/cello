@@ -25,9 +25,9 @@ class FabricNetwork(object):
         self._type = kwargs.get("node_type")
         self._agent_id = kwargs.get("agent_id")
         self._node_id = kwargs.get("node_id")
-        self._deploy_name = "deploy-%s" % str(self._node_id)
-        self._service_name = "service-%s" % str(self._node_id)
-        self._ingress_name = "ingress-%s" % str(self._node_id)
+        self._deploy_name = f"deploy-{str(self._node_id)}"
+        self._service_name = f"service-{str(self._node_id)}"
+        self._ingress_name = f"ingress-{str(self._node_id)}"
         self._container_image = ""
         self._container_environments = None
         self._container_command = None
@@ -41,7 +41,7 @@ class FabricNetwork(object):
         if self._type == FabricNodeType.Ca.value:
             self._container_ports = [7054]
             self._service_ports = [{"port": 7054, "name": "server"}]
-            self._image_name = "%s:%s" % (FabricImages.Ca.value, self._version)
+            self._image_name = f"{FabricImages.Ca.value}:{self._version}"
             self._pod_name = "ca-server"
             self._init_ca_deployment()
         elif self._type == FabricNodeType.Peer.value:
@@ -50,10 +50,7 @@ class FabricNetwork(object):
                 {"port": 7051, "name": "server"},
                 {"port": 7052, "name": "grpc"},
             ]
-            self._image_name = "%s:%s" % (
-                FabricImages.Peer.value,
-                self._version,
-            )
+            self._image_name = f"{FabricImages.Peer.value}:{self._version}"
             self._pod_name = "peer"
             self._init_peer_deployment()
         else:
@@ -82,7 +79,7 @@ class FabricNetwork(object):
         self._container_command_args = [
             "start",
             "-b",
-            "%s:%s" % (CA_ADMIN_NAME, CA_ADMIN_PASSWORD),
+            f"{CA_ADMIN_NAME}:{CA_ADMIN_PASSWORD}",
             "-d",
         ]
 
@@ -101,8 +98,7 @@ class FabricNetwork(object):
         initial_container_environments = [
             {
                 "name": "FABRIC_CA_CLIENT_HOME",
-                "value": "%s/hyperledger/org1/peer1"
-                % initial_container_work_dir,
+                "value": f"{initial_container_work_dir}/hyperledger/org1/peer1",
             },
             {"name": "PEER_NAME", "value": name},
         ]
@@ -118,17 +114,17 @@ class FabricNetwork(object):
             ca_type = ca_node.get("type").upper()
             users = ca_node.get("users", [])
             ca_environments = [
-                {"name": "%s_CA_ADDRESS" % ca_type, "value": ca_address},
+                {"name": f"{ca_type}_CA_ADDRESS", "value": ca_address},
                 {
-                    "name": "%s_CA_CERTIFICATE_URL" % ca_type,
+                    "name": f"{ca_type}_CA_CERTIFICATE_URL",
                     "value": ca_certificate_url,
                 },
                 {
-                    "name": "%s_CA_CERTIFICATE_FILE_NAME" % ca_type,
+                    "name": f"{ca_type}_CA_CERTIFICATE_FILE_NAME",
                     "value": ca_certificate_file_name,
                 },
                 {
-                    "name": "%s_CA_CERTIFICATE_FILE_TYPE" % ca_type,
+                    "name": f"{ca_type}_CA_CERTIFICATE_FILE_TYPE",
                     "value": ca_certificate_file_type,
                 },
             ]
@@ -138,11 +134,11 @@ class FabricNetwork(object):
                 password = user.get("password")
                 ca_environments += [
                     {
-                        "name": "%s_%s_USER_NAME" % (ca_type, user_type),
+                        "name": f"{ca_type}_{user_type}_USER_NAME",
                         "value": username,
                     },
                     {
-                        "name": "%s_%s_USER_PASSWORD" % (ca_type, user_type),
+                        "name": f"{ca_type}_{user_type}_USER_PASSWORD",
                         "value": password,
                     },
                 ]
@@ -158,7 +154,7 @@ class FabricNetwork(object):
         with open(script_file_path, "r") as initial_ca_script:
             shell_script = initial_ca_script.read()
         initial_container_command_args = [shell_script]
-        ca_image = "%s:%s" % (FabricImages.Ca.value, self._version)
+        ca_image = f"{FabricImages.Ca.value}:{self._version}"
 
         self._initial_containers = [
             {
@@ -247,30 +243,24 @@ class FabricNetwork(object):
     def deployment(self):
         deployment = {"name": self._deploy_name}
         if self._volumes is not None:
-            deployment.update({"volumes": self._volumes})
+            deployment["volumes"] = self._volumes
         if self._initial_containers is not None:
-            deployment.update({"initial_containers": self._initial_containers})
+            deployment["initial_containers"] = self._initial_containers
         container_dict = {
             "image": self._image_name,
             "name": self._pod_name,
             "ports": self._container_ports,
         }
         if self._container_environments is not None:
-            container_dict.update(
-                {"environments": self._container_environments}
-            )
+            container_dict["environments"] = self._container_environments
         if self._container_volume_mounts is not None:
-            container_dict.update(
-                {"volume_mounts": self._container_volume_mounts}
-            )
+            container_dict["volume_mounts"] = self._container_volume_mounts
         if self._container_command is not None:
-            container_dict.update({"command": self._container_command})
+            container_dict["command"] = self._container_command
         if self._container_command_args is not None:
-            container_dict.update(
-                {"command_args": self._container_command_args}
-            )
+            container_dict["command_args"] = self._container_command_args
         containers = [container_dict]
-        deployment.update({"containers": containers})
+        deployment["containers"] = containers
 
         return deployment
 

@@ -39,11 +39,7 @@ class AgentHandler(object):
 
     def create(self, info):
         try:
-            cid = self._agent.create(info)
-            if cid:
-                return cid
-            else:
-                return None
+            return cid if (cid := self._agent.create(info)) else None
         except Exception as e:
             raise e
 

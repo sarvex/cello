@@ -42,9 +42,9 @@ class FabricNetwork(NetworkBase):
             {
                 "services": {
                     self._type: {
-                        "image": "%s:%s" % (CA_IMAGE_NAME, self._version),
+                        "image": f"{CA_IMAGE_NAME}:{self._version}",
                         "environment": environment,
-                        "ports": ["%s:7054" % ports[0]],
+                        "ports": [f"{ports[0]}:7054"],
                         "command": "sh -c 'fabric-ca-server start "
                         "--ca.certfile "
                         "/etc/hyperledger/fabric-ca-server-config"

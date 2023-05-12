@@ -120,8 +120,8 @@ class ChainCodeViewSet(viewsets.ViewSet):
                         break
                     elif dirs:
                         for each in dirs:
-                            chaincode_path += "/" + each
-                            if os.path.exists(chaincode_path + "/go.mod"):
+                            chaincode_path += f"/{each}"
+                            if os.path.exists(f"{chaincode_path}/go.mod"):
                                 cwd = os.getcwd()
                                 print("cwd:", cwd)
                                 os.chdir(chaincode_path)
@@ -132,7 +132,7 @@ class ChainCodeViewSet(viewsets.ViewSet):
                 # if can not find go.mod, use the dir after extract zipped_file
                 if not found:
                     for _, dirs, _ in os.walk(file_path):
-                        chaincode_path = file_path + "/" + dirs[0]
+                        chaincode_path = f"{file_path}/{dirs[0]}"
                         break
 
                 org = request.user.organization
@@ -145,8 +145,8 @@ class ChainCodeViewSet(viewsets.ViewSet):
                 peer_channel_cli = PeerChainCode("v2.2.0", **envs)
                 res = peer_channel_cli.lifecycle_package(
                     name, version, chaincode_path, language)
-                os.system("rm -rf {}/*".format(file_path))
-                os.system("mv {}.tar.gz {}".format(name, file_path))
+                os.system(f"rm -rf {file_path}/*")
+                os.system(f"mv {name}.tar.gz {file_path}")
                 if res != 0:
                     return Response(err("package chaincode failed."), status=status.HTTP_400_BAD_REQUEST)
                 chaincode = ChainCode(
@@ -179,7 +179,7 @@ class ChainCodeViewSet(viewsets.ViewSet):
             cc_targz = ""
             file_path = os.path.join(FABRIC_CHAINCODE_STORE, chaincode_id)
             for _, _, files in os.walk(file_path):
-                cc_targz = os.path.join(file_path + "/" + files[0])
+                cc_targz = os.path.join(f"{file_path}/{files[0]}")
                 break
 
             org = request.user.organization
@@ -287,12 +287,15 @@ class ChainCodeViewSet(viewsets.ViewSet):
                     raise ResourceNotFound
                 orderer_node = qs.first()
 
-                orderer_tls_dir = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}/msp/tlscacerts" \
-                                  .format(CELLO_HOME, org.name, org.name.split(".", 1)[1], orderer_node.name + "." +
-                                          org.name.split(".", 1)[1])
+                orderer_tls_dir = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}/msp/tlscacerts".format(
+                    CELLO_HOME,
+                    org.name,
+                    org.name.split(".", 1)[1],
+                    (f"{orderer_node.name}." + org.name.split(".", 1)[1]),
+                )
                 orderer_tls_root_cert = ""
                 for _, _, files in os.walk(orderer_tls_dir):
-                    orderer_tls_root_cert = orderer_tls_dir + "/" + files[0]
+                    orderer_tls_root_cert = f"{orderer_tls_dir}/{files[0]}"
                     break
                 qs = Node.objects.filter(type="peer", organization=org)
                 if not qs.exists():
@@ -304,7 +307,12 @@ class ChainCodeViewSet(viewsets.ViewSet):
                 code, content = peer_channel_cli.lifecycle_approve_for_my_org(orderer_url, orderer_tls_root_cert, channel_name,
                                                                               chaincode_name, chaincode_version, policy, sequence)
                 if code != 0:
-                    return Response(err(" lifecycle_approve_for_my_org failed. err: " + content), status=status.HTTP_400_BAD_REQUEST)
+                    return Response(
+                        err(
+                            f" lifecycle_approve_for_my_org failed. err: {content}"
+                        ),
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
             except Exception as e:
                 return Response(
                     err(e.args), status=status.HTTP_400_BAD_REQUEST
@@ -371,13 +379,16 @@ class ChainCodeViewSet(viewsets.ViewSet):
                     raise ResourceNotFound
                 orderer_node = qs.first()
 
-                orderer_tls_dir = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}/msp/tlscacerts" \
-                    .format(CELLO_HOME, org.name, org.name.split(".", 1)[1], orderer_node.name + "." +
-                            org.name.split(".", 1)[1])
+                orderer_tls_dir = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}/msp/tlscacerts".format(
+                    CELLO_HOME,
+                    org.name,
+                    org.name.split(".", 1)[1],
+                    (f"{orderer_node.name}." + org.name.split(".", 1)[1]),
+                )
 
                 orderer_tls_root_cert = ""
                 for _, _, files in os.walk(orderer_tls_dir):
-                    orderer_tls_root_cert = orderer_tls_dir + "/" + files[0]
+                    orderer_tls_root_cert = f"{orderer_tls_dir}/{files[0]}"
                     break
 
                 qs = Node.objects.filter(type="peer", organization=org)
@@ -427,12 +438,10 @@ class ChainCodeViewSet(viewsets.ViewSet):
                     raise ResourceNotFound
                 orderer_node = qs.first()
 
-                orderer_tls_dir = "{}/{}/crypto-config/ordererOrganizations/{}/orderers/{}/msp/tlscacerts" \
-                    .format(CELLO_HOME, org.name, org.name.split(".", 1)[1], orderer_node.name + "." +
-                            org.name.split(".", 1)[1])
+                orderer_tls_dir = f'{CELLO_HOME}/{org.name}/crypto-config/ordererOrganizations/{org.name.split(".", 1)[1]}/orderers/{f"{orderer_node.name}." + org.name.split(".", 1)[1]}/msp/tlscacerts'
                 orderer_tls_root_cert = ""
                 for _, _, files in os.walk(orderer_tls_dir):
-                    orderer_tls_root_cert = orderer_tls_dir + "/" + files[0]
+                    orderer_tls_root_cert = f"{orderer_tls_dir}/{files[0]}"
                     break
 
                 qs = Node.objects.filter(type="peer", organization=org)
@@ -441,17 +450,15 @@ class ChainCodeViewSet(viewsets.ViewSet):
                 peer_node = qs.first()
                 envs = init_env_vars(peer_node, org)
 
-                peer_root_certs = []
                 peer_address_list = []
+                peer_root_certs = []
                 for each in peer_list:
                     peer_node = Node.objects.get(id=each)
-                    peer_tls_cert = "{}/{}/crypto-config/peerOrganizations/{}/peers/{}/tls/ca.crt" \
-                                    .format(CELLO_HOME, org.name, org.name, peer_node.name + "." + org.name)
+                    peer_tls_cert = f"{CELLO_HOME}/{org.name}/crypto-config/peerOrganizations/{org.name}/peers/{peer_node.name}.{org.name}/tls/ca.crt"
                     print(peer_node.port)
                     # port = peer_node.port.all()[0].internal
                     # port = ports[0].internal
-                    peer_address = peer_node.name + \
-                        "." + org.name + ":" + str(7051)
+                    peer_address = f"{peer_node.name}.{org.name}:7051"
                     peer_address_list.append(peer_address)
                     peer_root_certs.append(peer_tls_cert)
 
@@ -510,20 +517,15 @@ def init_env_vars(node, org):
     """
     org_name = org.name
     org_domain = org_name.split(".", 1)[1]
-    dir_certificate = "{}/{}/crypto-config/ordererOrganizations/{}".format(
-        CELLO_HOME, org_name, org_domain)
-    dir_node = "{}/{}/crypto-config/peerOrganizations".format(
-        CELLO_HOME, org_name)
+    dir_certificate = f"{CELLO_HOME}/{org_name}/crypto-config/ordererOrganizations/{org_domain}"
+    dir_node = f"{CELLO_HOME}/{org_name}/crypto-config/peerOrganizations"
 
-    envs = {
+    return {
         "CORE_PEER_TLS_ENABLED": "true",
-        # "Org1.cello.comMSP"
-        "CORE_PEER_LOCALMSPID": "{}MSP".format(org_name.capitalize()),
-        "CORE_PEER_TLS_ROOTCERT_FILE": "{}/{}/peers/{}/tls/ca.crt".format(dir_node, org_name, node.name + "." + org_name),
-        "CORE_PEER_ADDRESS": "{}:{}".format(
-            node.name + "." + org_name, str(7051)),
-        "CORE_PEER_MSPCONFIGPATH": "{}/{}/users/Admin@{}/msp".format(dir_node, org_name, org_name),
-        "FABRIC_CFG_PATH": "{}/{}/peers/{}/".format(dir_node, org_name, node.name + "." + org_name),
-        "ORDERER_CA": "{}/msp/tlscacerts/tlsca.{}-cert.pem".format(dir_certificate, org_domain)
+        "CORE_PEER_LOCALMSPID": f"{org_name.capitalize()}MSP",
+        "CORE_PEER_TLS_ROOTCERT_FILE": f"{dir_node}/{org_name}/peers/{node.name}.{org_name}/tls/ca.crt",
+        "CORE_PEER_ADDRESS": f"{node.name}.{org_name}:7051",
+        "CORE_PEER_MSPCONFIGPATH": f"{dir_node}/{org_name}/users/Admin@{org_name}/msp",
+        "FABRIC_CFG_PATH": f"{dir_node}/{org_name}/peers/{node.name}.{org_name}/",
+        "ORDERER_CA": f"{dir_certificate}/msp/tlscacerts/tlsca.{org_domain}-cert.pem",
     }
-    return envs
